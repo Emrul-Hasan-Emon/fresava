@@ -8,7 +8,7 @@ const FACEBOOK_URL: string | null = null;
 
 const WHATSAPP_NUMBER = "8801633366606";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  "Hi Fresava! I'd like to order the Dragon Fruit & Honey Jelly."
+  "Hi Fresava! I'd like to order the Dragon Fruit Spread."
 )}`;
 
 function WhatsAppIcon({ className = "" }: { className?: string }) {
@@ -56,9 +56,9 @@ export function OrderNow() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 bottom-full mb-3 w-64 overflow-hidden rounded-2xl border border-maroon/10 bg-white shadow-xl shadow-black/10"
+          className="absolute right-0 bottom-full mb-3 w-64 overflow-hidden rounded-2xl border border-crimson/10 bg-white shadow-xl shadow-black/10"
         >
-          <div className="flex items-center justify-between border-b border-maroon/10 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-crimson/10 px-4 py-3">
             <p className="text-sm font-medium text-ink">Order via</p>
             <button
               type="button"
@@ -76,7 +76,7 @@ export function OrderNow() {
             rel="noopener noreferrer"
             role="menuitem"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-4 py-3.5 text-sm text-ink transition-colors hover:bg-maroon/5"
+            className="flex items-center gap-3 px-4 py-3.5 text-sm text-ink transition-colors hover:bg-crimson/5"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25D366]/10 text-[#1DA851]">
               <WhatsAppIcon className="h-4.5 w-4.5" />
@@ -94,7 +94,7 @@ export function OrderNow() {
               rel="noopener noreferrer"
               role="menuitem"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-3.5 text-sm text-ink transition-colors hover:bg-maroon/5"
+              className="flex items-center gap-3 px-4 py-3.5 text-sm text-ink transition-colors hover:bg-crimson/5"
             >
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1877F2]/10 text-[#1877F2]">
                 <FacebookIcon className="h-4.5 w-4.5" />
@@ -119,7 +119,7 @@ export function OrderNow() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-full bg-maroon px-6 py-3.5 text-sm font-medium text-cream-soft shadow-lg shadow-maroon/25 transition-colors hover:bg-maroon-deep"
+        className="flex items-center gap-2 rounded-full bg-crimson px-6 py-3.5 text-sm font-medium text-cream shadow-lg shadow-crimson/25 transition-colors hover:bg-crimson-deep"
       >
         <ShoppingBag size={17} strokeWidth={1.5} />
         Order Now
