@@ -3,28 +3,44 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3005",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -p 3005",
+    "lint": "eslint src server shared eslint.config.mjs",
+    "typecheck": "next typegen && tsc --noEmit && tsc -p server/tsconfig.json",
+    "test": "tsx --test server/tests/*.test.ts",
+    "test:db": "tsx --test server/tests/database.test.ts",
+    "test:e2e": "playwright test",
+    "provision": "node --env-file=.env.local --import tsx server/scripts/provision.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.1",
     "clsx": "^2.1.1",
     "framer-motion": "^13.2.0",
+    "html5-qrcode": "^2.3.8",
+    "jose": "^6.2.12",
+    "jsbarcode": "^3.12.3",
     "lucide-react": "^1.45.0",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
+    "@types/jsbarcode": "^3.11.4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "pg": "^8.23.0",
+    "prettier": "^3.9.9",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

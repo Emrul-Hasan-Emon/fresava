@@ -1,4 +1,5 @@
 "use client";
+import {AccountLink} from "@/features/customers/account-link";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -66,7 +67,7 @@ export function SiteHeader() {
             ))}
           </ul>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5"><AccountLink/><Link href="/orders" className="text-xs text-ink/70">Orders</Link>
             <Link
               href="/spread"
               className="hidden rounded-full bg-crimson px-4 py-1.5 text-[0.72rem] font-medium tracking-wide text-cream transition-colors hover:bg-crimson-dark sm:inline-block"

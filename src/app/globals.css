@@ -149,3 +149,7 @@ body {
     transform: rotate(360deg);
   }
 }
+
+@keyframes float {0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes fadeUp {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}.floaty,.animate-marquee,.scroll-hint span{animation:none}*{scroll-behavior:auto!important}}

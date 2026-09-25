@@ -1,7 +1,3 @@
 import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  output: "export",
-};
-
+const nextConfig: NextConfig = { poweredByHeader: false };
 export default nextConfig;

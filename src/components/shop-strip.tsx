@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
-import { SHOP_PRODUCTS, formatBDT } from "@/lib/products";
+import { formatBDT } from "@/lib/products";
 import { Reveal } from "./reveal";
 
 export function ShopStrip() {
-  const { add } = useCart();
+  const { add, products: SHOP_PRODUCTS } = useCart();
 
   return (
     <section className="bg-white py-20 sm:py-28">
@@ -66,8 +66,7 @@ export function ShopStrip() {
 
         <Reveal>
           <p className="mt-8 text-center text-[0.8rem] text-ink/50">
-            Free delivery over &#2547;1,500 &middot; Cash on delivery &middot; Secure bKash, Nagad,
-            Rocket and card payments
+            Free delivery over &#2547;1,500 &middot; Cash on delivery
           </p>
         </Reveal>
       </div>

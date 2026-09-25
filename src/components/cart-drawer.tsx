@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
-import { FREE_SHIP_THRESHOLD, formatBDT, getProduct } from "@/lib/products";
+import { formatBDT } from "@/lib/products";
 import { cn } from "@/lib/cn";
 
 export function CartDrawer() {
-  const { lines, count, subtotal, savings, discount, isOpen, setOpen, setQty, remove } =
+  const { lines, count, subtotal, savings, discount, isOpen, setOpen, setQty, remove, products, freeThreshold } =
     useCart();
 
-  const remaining = Math.max(0, FREE_SHIP_THRESHOLD - subtotal);
-  const shipProgress = Math.min(100, (subtotal / FREE_SHIP_THRESHOLD) * 100);
+  const remaining = Math.max(0, freeThreshold - (subtotal-discount));
+  const shipProgress = Math.min(100, ((subtotal-discount) / freeThreshold) * 100);
 
   return (
     <div className={cn("fixed inset-0 z-[70]", !isOpen && "pointer-events-none")} aria-hidden={!isOpen}>
@@ -46,13 +46,13 @@ export function CartDrawer() {
           <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/jar-hero.png"
+              src="/images/empty-trolley.png"
               alt=""
               className="blend-multiply h-40 w-auto object-contain opacity-90"
             />
-            <p className="headline mt-8 text-3xl text-ink">Your bag is empty.</p>
+            <p className="headline mt-8 text-3xl text-ink">Nothing here yet.</p>
             <p className="mt-3 max-w-[26ch] text-sm leading-relaxed text-ink/55">
-              One jar is all it takes to start. Organic fruit, pure honey, nothing artificial.
+              Your little jar of happiness is waiting to come home.
             </p>
             <Link
               href="/spread"
@@ -85,7 +85,8 @@ export function CartDrawer() {
 
             <ul className="flex-1 divide-y divide-ink/8 overflow-y-auto px-6">
               {lines.map((l) => {
-                const p = getProduct(l.id);
+                const p = products.find(p => p.id === l.id);
+                if (!p) return null;
                 return (
                   <li key={l.id} className="flex gap-4 py-5">
                     <div className="flex h-20 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white">
@@ -162,14 +163,14 @@ export function CartDrawer() {
                 </span>
               </div>
               <p className="mt-1 text-[0.7rem] text-ink/40">
-                Delivery calculated at checkout &middot; bKash, Nagad, cards &amp; COD
+                Delivery calculated at checkout &middot; Cash on delivery
               </p>
               <Link
                 href="/checkout"
                 onClick={() => setOpen(false)}
                 className="mt-4 block rounded-full bg-crimson py-3 text-center text-[0.82rem] font-medium tracking-wide text-cream transition-colors hover:bg-crimson-dark"
               >
-                Checkout &middot; Pay securely
+                Checkout &middot; Cash on delivery
               </Link>
               <button
                 onClick={() => setOpen(false)}

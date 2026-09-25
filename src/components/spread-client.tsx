@@ -1,29 +1,30 @@
 "use client";
-
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+/* eslint-disable @next/next/no-img-element */
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { useState } from "react";
+import { IMG } from "@/lib/assets";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCart } from "@/lib/cart-context";
+import { formatBDT } from "@/lib/products";
+import { Reveal } from "@/components/reveal";
 import { PageHero } from "@/components/page-hero";
 import { USPSection } from "@/components/usp-section";
-import { Reveal } from "@/components/reveal";
-import { useCart } from "@/lib/cart-context";
-import { SHOP_PRODUCTS, formatBDT } from "@/lib/products";
 import { cn } from "@/lib/cn";
 
-const SPECS: [string, string][] = [
-  ["Net weight", "240 g"],
+const SPECS = [
+  ["Net weight", "340 g"],
   ["Format", "Recyclable glass jar, crimson twist lid"],
   ["Texture", "Soft-set spread with visible fruit and seeds"],
   ["Setting agent", "Natural fruit pectin"],
-  ["Sweetened with", "Pure honey"],
-  ["Shelf life", "9 months sealed · 3 weeks refrigerated after opening"],
-  ["Batch size", "Max 400 jars"],
+  ["Sweetened with", "Pure black cumin honey"],
+  ["Shelf life", "6 months sealed · 3 weeks refrigerated after opening"],
+  ["Batch size", "Max 100 jars"],
   ["Certification", "Halal process · BSTI compliant facility"],
 ];
 
-const NUTRITION: [string, string][] = [
+const NUTRITION = [
   ["Energy", "128 kcal"],
   ["Total sugars (fruit)", "14 g"],
   ["Added sugar", "0 g"],
@@ -33,24 +34,39 @@ const NUTRITION: [string, string][] = [
 ];
 
 const USES = [
-  { t: "On warm toast", d: "Sourdough, brioche or a simple paratha. The spread melts slowly." },
-  { t: "Folded into yoghurt", d: "One spoon turns plain curd into a magenta breakfast bowl." },
-  { t: "With cheese", d: "Sharp white cheese and dragon fruit is an unexpectedly perfect pair." },
-  { t: "For the children", d: "Safe for little ones — no colour, no preservative, no guilt." },
+  {
+    t: "On warm toast",
+    d: "Sourdough, brioche, or a simple paratha. The warmth meets the spread, and for a moment, everything slows down.",
+  },
+  {
+    t: "Folded into yoghurt",
+    d: "One spoon. Plain curd becomes a magenta breakfast bowl - bright, beautiful, gone too soon.",
+  },
+  {
+    t: "With cheese",
+    d: "Sharp white cheese, a spoon of dragon fruit. An unlikely pair - until you taste it.",
+  },
+  {
+    t: "For the children",
+    d: "Safe for little neighbours - no colour, no preservative, no guilt. Just sticky fingers and happy faces.",
+  },
 ];
 
 export function SpreadClient() {
   const [tab, setTab] = useState<"specs" | "nutrition">("specs");
   const [variantId, setVariantId] = useState("duo");
   const [qty, setQty] = useState(1);
-  const { add } = useCart();
+  const { add, products: SHOP_PRODUCTS } = useCart();
   const router = useRouter();
 
   const rows = tab === "specs" ? SPECS : NUTRITION;
-  const variant = SHOP_PRODUCTS.find((p) => p.id === variantId) ?? SHOP_PRODUCTS[0];
+  const variant =
+    SHOP_PRODUCTS.find((p) => p.id === variantId) ?? SHOP_PRODUCTS[0];
 
   const scrollToBuy = () => {
-    document.getElementById("buy")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("buy")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const buyNow = () => {
@@ -58,6 +74,17 @@ export function SpreadClient() {
     router.push("/checkout");
   };
 
+  if (!variant)
+    return (
+      <>
+        <SiteHeader />
+        <main className="min-h-screen px-6 pt-32 text-center">
+          <h1 className="headline text-4xl">Our next batch is on its way.</h1>
+          <p className="mt-6">Please contact us for availability.</p>
+        </main>
+        <SiteFooter />
+      </>
+    );
   return (
     <>
       <SiteHeader />
@@ -66,16 +93,15 @@ export function SpreadClient() {
           eyebrow="The Signature Jar"
           title={
             <>
-              The whole fruit,
+              Pure fruit.
               <br />
-              held in glass.
+              Perfectly preserved.
             </>
           }
-          sub="Fresava Dragon Fruit Spread. Premium organic fruit, pure honey sweetness, and a clean label you can read in one breath."
+          sub="Fresava Dragon Fruit Spread. Premium organic fruit, pure Black Cumin honey sweetness, and a clean label you can read in one breath."
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/images/jar-hero.png"
+            src={IMG.jarHero}
             alt="Fresava Dragon Fruit Spread jar"
             className="blend-multiply mt-12 h-[38vh] w-auto object-contain sm:h-[46vh]"
           />
@@ -84,7 +110,7 @@ export function SpreadClient() {
               onClick={() => add("single", 1)}
               className="rounded-full bg-crimson px-7 py-2.5 text-[0.8rem] font-medium text-cream transition-transform hover:scale-105"
             >
-              Add a Jar &middot; {formatBDT(495)}
+              Add a Jar · {formatBDT(495)}
             </button>
             <button
               onClick={scrollToBuy}
@@ -105,14 +131,13 @@ export function SpreadClient() {
                     {variant.badge}
                   </span>
                 )}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/jar-hero.png"
+                  src={IMG.jarHero}
                   alt="Fresava Dragon Fruit Spread"
                   className="blend-multiply mx-auto h-[38vh] w-auto object-contain sm:h-[44vh]"
                 />
                 <p className="mt-4 text-[0.72rem] tracking-[0.22em] text-ink/45 uppercase">
-                  {variant.size} &middot; Small batch &#8470; 091
+                  {variant.size} · Small batch № 091
                 </p>
               </div>
             </Reveal>
@@ -120,13 +145,14 @@ export function SpreadClient() {
             <Reveal delay={120}>
               <p className="eyebrow text-crimson/70">Shop the Signature</p>
               <h2 className="headline mt-4 text-4xl text-ink sm:text-5xl">
-                Dragon Fruit Spread &middot; 240 g
+                Dragon Fruit Spread · {variant.size}
               </h2>
               <p className="mt-3 text-[0.82rem] text-ink/50">
-                <span className="font-medium text-ink">4.9 / 5</span> from 212 breakfasts &middot;
-                No added sugar &middot; Pure honey &middot; Halal
+                <span className="font-medium text-ink">4.9 / 5</span> 17
+                breakfasts · No added sugar · Pure Black Cumin honey
               </p>
 
+              {/* variants */}
               <div className="mt-8 grid gap-2.5">
                 {SHOP_PRODUCTS.map((p) => (
                   <button
@@ -136,14 +162,19 @@ export function SpreadClient() {
                       "flex items-center gap-4 rounded-2xl border p-4 text-left transition-all",
                       variantId === p.id
                         ? "border-crimson bg-cream shadow-[0_8px_30px_rgba(142,15,19,0.08)]"
-                        : "border-ink/10 bg-transparent hover:border-ink/25"
+                        : "border-ink/10 bg-transparent hover:border-ink/25",
                     )}
                   >
                     <span className="flex-1">
                       <span className="block text-[0.9rem] font-medium text-ink">
-                        {p.name} <span className="font-normal text-ink/45">&middot; {p.size}</span>
+                        {p.name}{" "}
+                        <span className="font-normal text-ink/45">
+                          · {p.size}
+                        </span>
                       </span>
-                      <span className="block text-[0.74rem] text-ink/50">{p.blurb}</span>
+                      <span className="block text-[0.74rem] text-ink/50">
+                        {p.blurb}
+                      </span>
                     </span>
                     <span className="text-right">
                       <span className="block text-[0.95rem] font-medium text-ink">
@@ -159,6 +190,7 @@ export function SpreadClient() {
                 ))}
               </div>
 
+              {/* qty + actions */}
               <div className="mt-6 flex items-center gap-3">
                 <div className="flex items-center gap-1 rounded-full bg-ink/5 p-1.5">
                   <button
@@ -166,9 +198,11 @@ export function SpreadClient() {
                     aria-label="Fewer packs"
                     className="flex h-9 w-9 items-center justify-center rounded-full text-lg transition-colors hover:bg-white"
                   >
-                    &minus;
+                    −
                   </button>
-                  <span className="w-8 text-center text-[0.95rem] font-medium">{qty}</span>
+                  <span className="w-8 text-center text-[0.95rem] font-medium">
+                    {qty}
+                  </span>
                   <button
                     onClick={() => setQty((q) => Math.min(9, q + 1))}
                     aria-label="More packs"
@@ -177,7 +211,9 @@ export function SpreadClient() {
                     +
                   </button>
                 </div>
-                <p className="headline text-3xl text-ink">{formatBDT(variant.price * qty)}</p>
+                <p className="headline text-3xl text-ink">
+                  {formatBDT(variant.price * qty)}
+                </p>
                 {variant.compareAt && (
                   <p className="text-sm text-ink/35 line-through">
                     {formatBDT(variant.compareAt * qty)}
@@ -201,13 +237,8 @@ export function SpreadClient() {
               </div>
 
               <ul className="mt-7 space-y-2.5 border-t border-ink/8 pt-6 text-[0.8rem] text-ink/55">
-                <li>Free delivery over &#2547;1,500 &middot; Cash on delivery available</li>
-                <li>
-                  bKash &middot; Nagad &middot; Rocket &middot; Cards &mdash;{" "}
-                  <Link href="/checkout" className="text-crimson underline-offset-4 hover:underline">
-                    secure checkout
-                  </Link>
-                </li>
+                <li>Free delivery over ৳1,500 · Cash on delivery available</li>
+
                 <li>3-day full-refund satisfaction guarantee on every order</li>
               </ul>
             </Reveal>
@@ -218,12 +249,16 @@ export function SpreadClient() {
         <section className="bg-cream py-24 sm:py-32">
           <div className="mx-auto max-w-5xl px-6 text-center sm:px-8">
             <Reveal>
-              <p className="eyebrow text-crimson/70">The full ingredient list</p>
+              <p className="eyebrow text-crimson/70">
+                The full ingredient list
+              </p>
               <h2 className="headline mt-6 text-3xl leading-tight text-ink sm:text-5xl">
-                Organic red dragon fruit &middot; pure honey &middot; lemon juice &middot; natural
-                fruit pectin.
+                Organic Red Dragon Fruit · Pure Black Cumin Honey · Food Grade
+                Citric Acid · Natural Fruit Pectin
               </h2>
-              <p className="mt-8 text-sm text-ink/50">That is the entire list. There is no line five.</p>
+              <p className="mt-8 text-sm text-ink/50">
+                That is the entire list. There is no line five.
+              </p>
             </Reveal>
           </div>
         </section>
@@ -231,9 +266,8 @@ export function SpreadClient() {
         {/* Texture split */}
         <section className="grid lg:grid-cols-2">
           <div className="relative min-h-[60vh]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/texture.jpg"
+              src={IMG.texture}
               alt="Dragon fruit spread texture"
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -244,21 +278,30 @@ export function SpreadClient() {
               <h2 className="headline mt-5 text-4xl text-ink sm:text-5xl">
                 Soft enough to spread. Whole enough to taste.
               </h2>
-              <p className="mt-6 max-w-md text-[0.92rem] leading-relaxed text-ink/60">
-                We cook low and slow, below the temperature that dulls dragon fruit&rsquo;s
-                colour, then set the spread with fruit pectin. Pure honey rounds the fruit without
-                burying its floral fragrance, while the seeds stay intact and the colour stays
-                exactly as nature printed it.
+              <p className="mt-6 max-w-md text-[0.90rem] leading-relaxed text-ink/60">
+                We cook low and slow, never above 90°C, because heat steals the
+                colour. Ten minutes before the end, turn off the flame and add
+                the citric acid. Fruit pectin sets it gently, keeping every seed
+                and chunk whole. When it drops below 70°C, pure black cumin
+                honey goes in for five minutes, rounding the fruit without
+                burying its fragrance. And the colour? Exactly as nature printed
+                it.
               </p>
               <ul className="mt-8 space-y-3">
-                {["Low-temperature kettle", "Pure honey sweetness", "Seeds left whole", "Sealed same day"].map(
-                  (x) => (
-                    <li key={x} className="flex items-center gap-3 text-sm text-ink/70">
-                      <span className="h-1.5 w-1.5 rounded-full bg-crimson" />
-                      {x}
-                    </li>
-                  )
-                )}
+                {[
+                  "Low-temperature jam pan",
+                  "Pure black cumin honey",
+                  "Every seed left whole",
+                  "Sealed the same day",
+                ].map((x) => (
+                  <li
+                    key={x}
+                    className="flex items-center gap-3 text-sm text-ink/70"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-crimson" />
+                    {x}
+                  </li>
+                ))}
               </ul>
             </Reveal>
           </div>
@@ -277,7 +320,9 @@ export function SpreadClient() {
                     onClick={() => setTab(t)}
                     className={cn(
                       "rounded-full px-5 py-2 text-[0.78rem] tracking-wide transition-colors",
-                      tab === t ? "bg-crimson text-cream" : "bg-black/5 text-ink/60 hover:bg-black/10"
+                      tab === t
+                        ? "bg-crimson text-cream"
+                        : "bg-black/5 text-ink/60 hover:bg-black/10",
                     )}
                   >
                     {t === "specs" ? "Specification" : "Per 100 g"}
@@ -286,7 +331,10 @@ export function SpreadClient() {
               </div>
               <dl className="mt-12 divide-y divide-black/8 border-y border-black/8">
                 {rows.map(([k, v]) => (
-                  <div key={k} className="flex items-baseline justify-between gap-6 py-5">
+                  <div
+                    key={k}
+                    className="flex items-baseline justify-between gap-6 py-5"
+                  >
                     <dt className="text-sm text-ink/50">{k}</dt>
                     <dd className="text-right text-[0.95rem] text-ink">{v}</dd>
                   </div>
@@ -309,16 +357,17 @@ export function SpreadClient() {
                 <Reveal key={u.t} delay={i * 80}>
                   <div className="h-full rounded-3xl bg-white p-9">
                     <p className="headline text-2xl text-crimson">{u.t}</p>
-                    <p className="mt-3 text-[0.88rem] leading-relaxed text-ink/60">{u.d}</p>
+                    <p className="mt-3 text-[0.88rem] leading-relaxed text-ink/60">
+                      {u.d}
+                    </p>
                   </div>
                 </Reveal>
               ))}
             </div>
             <Reveal>
               <div className="mt-10 overflow-hidden rounded-[28px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/toast.jpg"
+                  src={IMG.toast}
                   alt="Spread on toast"
                   className="h-[52vh] w-full object-cover"
                 />
@@ -328,17 +377,19 @@ export function SpreadClient() {
         </section>
 
         <section className="bg-crimson px-6 py-24 text-center text-cream">
-          <h2 className="headline mx-auto max-w-2xl text-4xl sm:text-6xl">Breakfast is waiting.</h2>
+          <h2 className="headline mx-auto max-w-2xl text-4xl sm:text-6xl">
+            Breakfast is waiting.
+          </h2>
           <p className="mx-auto mt-6 max-w-md text-[0.92rem] text-cream/70">
-            Small batches sell out. Take yours home today, backed by our 3-day full-refund
-            guarantee.
+            Small batches sell out. Take yours home today, backed by our 3-day
+            full-refund guarantee.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <button
               onClick={() => add("family", 1)}
               className="rounded-full bg-cream px-8 py-3 text-[0.8rem] font-medium tracking-wide text-crimson transition-transform hover:scale-105"
             >
-              Add Family Box &middot; {formatBDT(1790)}
+              Add Family Box · {formatBDT(1790)}
             </button>
             <Link
               href="/purity"

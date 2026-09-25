@@ -20,7 +20,7 @@ export function ContactClient() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    window.location.href = `mailto:hello@fresava.com?subject=${encodeURIComponent(intent)}&body=${encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\nPhone: ${form.phone}\n\n${form.message}`)}`;
   };
 
   return (
@@ -36,7 +36,7 @@ export function ContactClient() {
               into your kitchen.
             </>
           }
-          sub="Seasonal batches are limited. Leave your details and we will confirm availability, delivery and pricing personally."
+          sub="Seasonal batches are limited. Complete the form to prepare an email in your email app, or order through WhatsApp."
           image="/images/jar-dark.jpg"
           dark
         />
@@ -114,7 +114,7 @@ export function ContactClient() {
                     type="submit"
                     className="rounded-full bg-crimson px-8 py-3 text-[0.8rem] font-medium tracking-wide text-cream transition-transform hover:scale-105"
                   >
-                    Send request
+                    Open email to send
                   </button>
                 </form>
               )}

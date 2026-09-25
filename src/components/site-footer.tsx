@@ -29,9 +29,9 @@ export function SiteFooter() {
           <div>
             <h4 className="eyebrow mb-5 text-cream/55">The Jar</h4>
             <ul className="space-y-2.5 text-sm text-cream/80">
-              <li>Dragon Fruit Spread &middot; 240g</li>
+              <li>Dragon Fruit Spread &middot; 340g</li>
               <li>Cold-set, small batch</li>
-              <li>No added sugar &middot; pure honey</li>
+              <li>No added sugar &middot; pure Black Cumin honey</li>
               <li>No artificial ingredients</li>
               <li>3-day full-refund promise</li>
               <li>Halal certified process</li>
@@ -41,7 +41,7 @@ export function SiteFooter() {
             <h4 className="eyebrow mb-5 text-cream/55">Company</h4>
             <ul className="space-y-2.5 text-sm text-cream/80">
               <li>Fresava Foods</li>
-              <li>Dhaka, Bangladesh</li>
+              <li>Block-F, Sector-2, House-6, Avenue-9, Aftabnagar, Dhaka 1212</li>
               <li>hello@fresava.com</li>
               <li>+880 1700 000 000</li>
             </ul>
@@ -60,7 +60,7 @@ export function SiteFooter() {
             <span className="mr-1 text-[0.68rem] tracking-[0.2em] text-cream/45 uppercase">
               We accept
             </span>
-            {["bKash", "Nagad", "Rocket", "VISA", "Mastercard", "COD"].map((p) => (
+            {["Cash on delivery"].map((p) => (
               <span
                 key={p}
                 className="rounded-full border border-cream/20 px-3 py-1 text-[0.68rem] font-medium tracking-wide text-cream/75"

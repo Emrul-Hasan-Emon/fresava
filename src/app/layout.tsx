@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Cormorant_Garamond, Inter } from "next/font/google";
-import { OrderNow } from "@/components/order-now";
-import { CartDrawer } from "@/components/cart-drawer";
-import { CartProvider } from "@/lib/cart-context";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -32,11 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${cormorant.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white text-ink font-sans">
-        <CartProvider>
-          {children}
-          <OrderNow />
-          <CartDrawer />
-        </CartProvider>
+        {children}
       </body>
     </html>
   );
