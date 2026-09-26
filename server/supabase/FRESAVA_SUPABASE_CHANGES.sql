@@ -1,28 +1,24 @@
 -- FRESAVA centralized Supabase schema changes
--- Version: 2026-09-25-existing-data-safe-rerunnable
+-- Version: 2026-09-26-order-reset-uuid-schema
 --
 -- Purpose:
 --   Run this file manually in Supabase when app/database changes are needed.
 --
 -- Existing-data policy:
---   - No DROP TABLE.
---   - No TRUNCATE.
---   - No DELETE.
---   - No destructive reset.
+--   - Customer, staff, auth/session, catalog, shipping, promotion, avatar, and rate-limit data are preserved.
+--   - Order workflow tables are intentionally dropped and recreated because the remote orders table was legacy-shaped.
+--   - This deletes existing order, order item, order status history, fulfillment request, and feedback data.
 --   - Seed rows use ON CONFLICT DO NOTHING so existing catalog/settings rows are preserved.
 --   - Functions are CREATE OR REPLACE because app behavior must match the deployed code.
---   - Tables, columns, indexes, triggers, storage bucket, grants, and RLS are created/enabled if missing.
---   - Foreign keys are intentionally not force-added here because existing tables may not yet have
---     compatible primary/unique constraints. Add them later after inspecting and cleaning existing data.
+--   - Non-order tables, columns, indexes, triggers, storage bucket, grants, and RLS are created/enabled if missing.
+--   - Fresh order workflow tables use the UUID schema expected by the current app.
 --
 -- Important:
---   This file is additive and data-preserving, but it can still fail on a database whose existing
---   schema conflicts with these definitions. If it fails, stop and inspect the reported object.
-
+--   This file intentionally resets order data. It can still fail on a database whose existing
+--   non-order schema conflicts with these definitions. If it fails, stop and inspect the reported object.
 begin;
 
 create extension if not exists pgcrypto;
-create sequence if not exists public.order_number_sequence;
 
 -- Helper used by this migration only. It prevents legacy duplicate data from
 -- aborting the whole schema run while still creating unique indexes when safe.
@@ -143,95 +139,100 @@ alter table public.guest_sessions add column if not exists revoked_at timestampt
 alter table public.guest_sessions add column if not exists created_at timestamptz not null default now();
 call pg_temp.fresava_create_unique_index_if_clean('guest_sessions_token_hash_unique','select count(*) from (select token_hash from public.guest_sessions where token_hash is not null group by token_hash having count(*)>1) d','create unique index guest_sessions_token_hash_unique on public.guest_sessions(token_hash) where token_hash is not null');
 
-create table if not exists public.orders(
- id uuid primary key default gen_random_uuid()
-);
-alter table public.orders add column if not exists id uuid default gen_random_uuid();
-alter table public.orders add column if not exists order_number text default ('FRV'||lpad(nextval('public.order_number_sequence')::text,8,'0'));
-alter table public.orders add column if not exists tracking_code text default ('FRT'||upper(encode(gen_random_bytes(8),'hex')));
-alter table public.orders add column if not exists customer_id uuid;
-alter table public.orders add column if not exists guest_session_id uuid;
-alter table public.orders add column if not exists customer_name text;
-alter table public.orders add column if not exists phone text;
-alter table public.orders add column if not exists email text;
-alter table public.orders add column if not exists address text;
-alter table public.orders add column if not exists city text;
-alter table public.orders add column if not exists notes text;
-alter table public.orders add column if not exists zone text;
-alter table public.orders add column if not exists eta text;
-alter table public.orders add column if not exists currency text not null default 'BDT';
-alter table public.orders add column if not exists subtotal integer;
-alter table public.orders add column if not exists discount integer;
-alter table public.orders add column if not exists shipping integer;
-alter table public.orders add column if not exists total integer;
-alter table public.orders add column if not exists promo text;
-alter table public.orders add column if not exists payment_method text not null default 'cod';
-alter table public.orders add column if not exists payment_status text not null default 'unpaid';
-alter table public.orders add column if not exists status text not null default 'order_confirmed';
-alter table public.orders add column if not exists version integer not null default 0;
-alter table public.orders add column if not exists idempotency_key uuid;
-alter table public.orders add column if not exists request_hash text;
-alter table public.orders add column if not exists created_at timestamptz not null default now();
-alter table public.orders add column if not exists updated_at timestamptz not null default now();
-call pg_temp.fresava_create_unique_index_if_clean('orders_order_number_unique','select count(*) from (select order_number from public.orders where order_number is not null group by order_number having count(*)>1) d','create unique index orders_order_number_unique on public.orders(order_number) where order_number is not null');
-call pg_temp.fresava_create_unique_index_if_clean('orders_tracking_code_unique','select count(*) from (select tracking_code from public.orders where tracking_code is not null group by tracking_code having count(*)>1) d','create unique index orders_tracking_code_unique on public.orders(tracking_code) where tracking_code is not null');
-call pg_temp.fresava_create_unique_index_if_clean('orders_idempotency','select count(*) from (select coalesce(customer_id,guest_session_id) owner_id,idempotency_key from public.orders where idempotency_key is not null and coalesce(customer_id,guest_session_id) is not null group by 1,2 having count(*)>1) d','create unique index orders_idempotency on public.orders(coalesce(customer_id,guest_session_id),idempotency_key) where idempotency_key is not null and coalesce(customer_id,guest_session_id) is not null');
-create index if not exists orders_customer on public.orders(customer_id,created_at desc);
-create index if not exists orders_guest on public.orders(guest_session_id,created_at desc);
-create index if not exists orders_status on public.orders(status,created_at desc);
+-- Order workflow reset: authorized by owner on 2026-09-26.
+-- This is the only destructive section in this central schema file.
+drop table if exists public.order_feedback cascade;
+drop table if exists public.fulfillment_requests cascade;
+drop table if exists public.order_status_history cascade;
+drop table if exists public.order_items cascade;
+drop table if exists public.orders cascade;
+drop sequence if exists public.order_number_sequence cascade;
+create sequence public.order_number_sequence;
 
-create table if not exists public.order_items(
- id uuid primary key default gen_random_uuid()
+create table public.orders(
+ id uuid primary key default gen_random_uuid(),
+ order_number text not null default ('FRV'||lpad(nextval('public.order_number_sequence')::text,8,'0')),
+ tracking_code text not null default ('FRT'||upper(encode(gen_random_bytes(8),'hex'))),
+ customer_id uuid,
+ guest_session_id uuid,
+ customer_name text not null,
+ phone text not null,
+ email text,
+ address text not null,
+ city text not null,
+ notes text,
+ zone text not null,
+ eta text not null,
+ currency text not null default 'BDT',
+ subtotal integer not null check(subtotal>=0),
+ discount integer not null default 0 check(discount>=0),
+ shipping integer not null default 0 check(shipping>=0),
+ total integer not null check(total=subtotal-discount+shipping and total>=0),
+ promo text,
+ payment_method text not null default 'cod' check(payment_method='cod'),
+ payment_status text not null default 'unpaid' check(payment_status in('unpaid','collected')),
+ status text not null default 'order_confirmed' check(status in('order_confirmed','ready_for_packing','packing','quality_check','ready_for_dispatch','handed_to_delivery','out_for_delivery','delivered')),
+ version integer not null default 0 check(version>=0),
+ idempotency_key uuid not null,
+ request_hash text not null,
+ created_at timestamptz not null default now(),
+ updated_at timestamptz not null default now(),
+ check(num_nonnulls(customer_id,guest_session_id)=1)
 );
-alter table public.order_items add column if not exists id uuid default gen_random_uuid();
-alter table public.order_items add column if not exists order_id uuid;
-alter table public.order_items add column if not exists product_id uuid;
-alter table public.order_items add column if not exists sku text;
-alter table public.order_items add column if not exists product_name text;
-alter table public.order_items add column if not exists jars integer;
-alter table public.order_items add column if not exists jar_weight_g integer;
-alter table public.order_items add column if not exists quantity integer;
-alter table public.order_items add column if not exists unit_price integer;
-alter table public.order_items add column if not exists subtotal integer;
-create index if not exists order_items_order on public.order_items(order_id);
+create unique index orders_order_number_unique on public.orders(order_number);
+create unique index orders_tracking_code_unique on public.orders(tracking_code);
+create unique index orders_idempotency on public.orders(coalesce(customer_id,guest_session_id),idempotency_key);
+create index orders_customer on public.orders(customer_id,created_at desc);
+create index orders_guest on public.orders(guest_session_id,created_at desc);
+create index orders_status on public.orders(status,created_at desc);
 
-create table if not exists public.order_status_history(
- id uuid primary key default gen_random_uuid()
+create table public.order_items(
+ id uuid primary key default gen_random_uuid(),
+ order_id uuid not null references public.orders(id) on delete cascade,
+ product_id uuid,
+ sku text not null,
+ product_name text not null,
+ jars integer not null check(jars>0),
+ jar_weight_g integer not null check(jar_weight_g>0),
+ quantity integer not null check(quantity between 1 and 99),
+ unit_price integer not null check(unit_price>=0),
+ subtotal integer not null check(subtotal=unit_price*quantity)
 );
-alter table public.order_status_history add column if not exists id uuid default gen_random_uuid();
-alter table public.order_status_history add column if not exists order_id uuid;
-alter table public.order_status_history add column if not exists from_status text;
-alter table public.order_status_history add column if not exists to_status text;
-alter table public.order_status_history add column if not exists version integer;
-alter table public.order_status_history add column if not exists staff_member_id uuid;
-alter table public.order_status_history add column if not exists source text;
-alter table public.order_status_history add column if not exists reason text;
-alter table public.order_status_history add column if not exists created_at timestamptz not null default now();
-call pg_temp.fresava_create_unique_index_if_clean('order_status_history_order_version_unique','select count(*) from (select order_id,version from public.order_status_history where order_id is not null and version is not null group by order_id,version having count(*)>1) d','create unique index order_status_history_order_version_unique on public.order_status_history(order_id,version) where order_id is not null and version is not null');
-create index if not exists order_history_order on public.order_status_history(order_id,created_at);
+create index order_items_order on public.order_items(order_id);
 
-create table if not exists public.fulfillment_requests(
- request_id uuid primary key
+create table public.order_status_history(
+ id uuid primary key default gen_random_uuid(),
+ order_id uuid not null references public.orders(id) on delete cascade,
+ from_status text,
+ to_status text not null,
+ version integer not null,
+ staff_member_id uuid,
+ source text not null check(source in('admin','staff','system')),
+ reason text,
+ created_at timestamptz not null default now(),
+ unique(order_id,version),
+ check((source='system' and staff_member_id is null) or (source in('admin','staff') and staff_member_id is not null))
 );
-alter table public.fulfillment_requests add column if not exists request_id uuid;
-alter table public.fulfillment_requests add column if not exists order_id uuid;
-alter table public.fulfillment_requests add column if not exists staff_member_id uuid;
-alter table public.fulfillment_requests add column if not exists expected_version integer;
-alter table public.fulfillment_requests add column if not exists result_version integer;
-alter table public.fulfillment_requests add column if not exists result_status text;
-alter table public.fulfillment_requests add column if not exists created_at timestamptz not null default now();
+create index order_history_order on public.order_status_history(order_id,created_at);
 
-create table if not exists public.order_feedback(
- id uuid primary key default gen_random_uuid()
+create table public.fulfillment_requests(
+ request_id uuid primary key,
+ order_id uuid not null references public.orders(id) on delete cascade,
+ staff_member_id uuid not null,
+ expected_version integer not null,
+ result_version integer not null,
+ result_status text not null,
+ created_at timestamptz not null default now()
 );
-alter table public.order_feedback add column if not exists id uuid default gen_random_uuid();
-alter table public.order_feedback add column if not exists order_id uuid;
-alter table public.order_feedback add column if not exists rating integer;
-alter table public.order_feedback add column if not exists feedback text;
-alter table public.order_feedback add column if not exists created_at timestamptz not null default now();
-call pg_temp.fresava_create_unique_index_if_clean('order_feedback_order_unique','select count(*) from (select order_id from public.order_feedback where order_id is not null group by order_id having count(*)>1) d','create unique index order_feedback_order_unique on public.order_feedback(order_id) where order_id is not null');
-create index if not exists feedback_created on public.order_feedback(created_at desc);
 
+create table public.order_feedback(
+ id uuid primary key default gen_random_uuid(),
+ order_id uuid not null unique references public.orders(id) on delete cascade,
+ rating integer not null check(rating between 1 and 5),
+ feedback text not null check(length(trim(feedback)) between 1 and 500),
+ created_at timestamptz not null default now()
+);
+create index feedback_created on public.order_feedback(created_at desc);
 create table if not exists public.audit_log(
  id uuid primary key default gen_random_uuid()
 );
