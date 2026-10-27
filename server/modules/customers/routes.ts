@@ -1,8 +1,8 @@
 import { database } from "../../infrastructure/supabase";
 import { HttpError, databaseError } from "../../http/errors";
 import type { RouteContext } from "../../http/context";
-import { accountSchema } from "../../../shared/contracts";
-import { body, rate } from "../../http/support";
+import { accountSchema, addressSchema } from "../../../shared/contracts";
+import { body, rate, id } from "../../http/support";
 import { requireCustomer } from "./auth";
 import { uploadAvatar } from "./avatar";
 export async function handleCustomerRoutes({
@@ -12,6 +12,63 @@ export async function handleCustomerRoutes({
   respond,
 }: RouteContext) {
   const db = database();
+  if (path === "customers/addresses" && (method === "GET" || method === "POST")) {
+    const p = await requireCustomer(request);
+    if (method === "GET") {
+      const result = await db
+        .from("customer_addresses")
+        .select("id,label,recipient_name,phone,address,city,is_default,created_at")
+        .eq("customer_id", p.id)
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: false });
+      databaseError(result.error);
+      return respond({ addresses: result.data });
+    }
+    const input = addressSchema.parse(await body(request));
+    if (input.is_default)
+      await db
+        .from("customer_addresses")
+        .update({ is_default: false })
+        .eq("customer_id", p.id);
+    const result = await db
+      .from("customer_addresses")
+      .insert({ ...input, customer_id: p.id })
+      .select()
+      .single();
+    databaseError(result.error);
+    return respond(result.data, 201);
+  }
+  const addressMatch = path.match(/^customers\/addresses\/([^/]+)(\/delete)?$/);
+  if (addressMatch) {
+    const p = await requireCustomer(request);
+    const addressId = id(addressMatch[1]);
+    if (method === "PATCH" && !addressMatch[2]) {
+      const input = addressSchema.parse(await body(request));
+      if (input.is_default)
+        await db
+          .from("customer_addresses")
+          .update({ is_default: false })
+          .eq("customer_id", p.id);
+      const result = await db
+        .from("customer_addresses")
+        .update(input)
+        .eq("id", addressId)
+        .eq("customer_id", p.id)
+        .select()
+        .single();
+      databaseError(result.error);
+      return respond(result.data);
+    }
+    if (method === "POST" && addressMatch[2]) {
+      const result = await db
+        .from("customer_addresses")
+        .delete()
+        .eq("id", addressId)
+        .eq("customer_id", p.id);
+      databaseError(result.error);
+      return respond({ ok: true });
+    }
+  }
   if (path === "customers/account" || path === "customers/account/avatar") {
     const p = await requireCustomer(request);
     if (method === "GET" && path === "customers/account") {
