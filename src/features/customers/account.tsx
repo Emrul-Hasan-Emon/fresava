@@ -14,6 +14,7 @@ import {
   button,
   secondary,
 } from "@/features/ui";
+import { CustomerAddresses } from "@/features/customers/addresses";
 
 function Initials({ name }: { name: string }) {
   const initials = name
@@ -37,7 +38,31 @@ export function CustomerAccount() {
   );
   const [message, setMessage] = useState(""),
     [actionError, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [passwordBusy, setPasswordBusy] = useState(false),
+    [passwordMessage, setPasswordMessage] = useState(""),
+    [passwordError, setPasswordError] = useState("");
+  async function changePassword(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPasswordBusy(true);
+    setPasswordError("");
+    setPasswordMessage("");
+    const password = new FormData(e.currentTarget).get("password");
+    try {
+      const result = await api<{ message: string }>("customers/auth/reset", {
+        method: "POST",
+        kind: "customer",
+        body: { password },
+      });
+      setPasswordMessage(result.message);
+      router.push("/auth");
+      router.refresh();
+    } catch (e) {
+      setPasswordError((e as Error).message);
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -181,7 +206,54 @@ export function CustomerAccount() {
             </form>
           </Card>
         </div>
-      ) : (
+      ) : null}
+      {data && (
+        <div className="mt-6 grid gap-6">
+          <CustomerAddresses />
+          <Card>
+            <p className="eyebrow text-crimson/70">Security</p>
+            <h2 className="headline mt-3 text-4xl text-ink">Change your password</h2>
+            <p className="mt-3 text-sm text-ink/55">
+              You&rsquo;ll be signed out on this device after changing it.
+            </p>
+            <form onSubmit={changePassword} className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <Field
+                  name="password"
+                  label="New password"
+                  type="password"
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  autoComplete="new-password"
+                />
+              </div>
+              <button className={button} disabled={passwordBusy}>
+                {passwordBusy ? "Updating…" : "Update password"}
+              </button>
+            </form>
+            <Message error>{passwordError}</Message>
+            <Message>{passwordMessage}</Message>
+          </Card>
+          <Card>
+            <p className="eyebrow text-crimson/70">Support</p>
+            <h2 className="headline mt-3 text-4xl text-ink">Need a hand?</h2>
+            <p className="mt-3 max-w-lg text-sm leading-6 text-ink/55">
+              Questions about an order, a delivery, or your account? Our team
+              replies within one working day.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link className={button} href="/contact">
+                Contact support
+              </Link>
+              <Link className={secondary} href="/orders">
+                Order support
+              </Link>
+            </div>
+          </Card>
+        </div>
+      )}
+      {!data && !loading && (
         <Card className="text-center">
           <h2 className="headline text-4xl text-ink">Come back to your jar story.</h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-ink/58">
