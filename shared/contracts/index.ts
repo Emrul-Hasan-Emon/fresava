@@ -15,12 +15,27 @@ export const statuses = [
   "out_for_delivery",
   "delivered",
 ] as const;
-export type OrderStatus = (typeof statuses)[number];
+export type OrderStatus = (typeof statuses)[number] | "cancelled";
 export const statusLabel = (s: string) =>
   s.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 export const money = (paisa: number) =>
   new Intl.NumberFormat("en-BD", { style: "currency", currency: "BDT" }).format(
     paisa / 100,
+  );
+export const extraCurrencies = [
+  "USD",
+  "GBP",
+  "AED",
+  "SAR",
+  "CAD",
+  "AUD",
+  "SGD",
+  "QAR",
+] as const;
+export type ExtraCurrency = (typeof extraCurrencies)[number];
+export const formatMoney = (cents: number, currency: string) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency }).format(
+    cents / 100,
   );
 const text = (max: number) => z.string().trim().min(1).max(max);
 export const credentialsSchema = z
@@ -69,6 +84,26 @@ export const accountSchema = z
     city: z.string().trim().max(100),
   })
   .strict();
+export const addressSchema = z
+  .object({
+    label: text(40),
+    recipient_name: text(120),
+    phone: z.string().trim().min(1).max(25),
+    address: text(400),
+    city: text(100),
+    is_default: z.boolean().default(false),
+  })
+  .strict();
+export interface CustomerAddress {
+  id: string;
+  label: string;
+  recipient_name: string;
+  phone: string;
+  address: string;
+  city: string;
+  is_default: boolean;
+  created_at: string;
+}
 export const feedbackSchema = z
   .object({ rating: z.number().int().min(1).max(5), feedback: text(500) })
   .strict();
@@ -79,7 +114,82 @@ export const advanceSchema = z
     request_id: z.uuid(),
   })
   .strict();
+export const cancelSchema = z
+  .object({
+    expected_version: z.number().int().min(0),
+    reason: text(500),
+  })
+  .strict();
+const compareAtValid = (v: { compare_at: number | null; price: number }) =>
+  v.compare_at === null || v.compare_at >= v.price;
+const compareAtMessage = "Compare-at price must be at least the selling price";
+export const productCategories = [
+  "Fruit Spreads",
+  "Jams",
+  "Marmalades",
+  "Preserves",
+  "Bundles & Gift Boxes",
+] as const;
+export type ProductCategory = (typeof productCategories)[number];
+const productFields = z
+  .object({
+    sku: text(40),
+    name: text(120),
+    blurb: z.string().trim().max(300).default(""),
+    jars: z.number().int().min(1).max(50),
+    jar_weight_g: z.number().int().min(1).max(100000),
+    price: z.number().int().min(0).max(100000000),
+    compare_at: z.number().int().min(0).max(100000000).nullable().default(null),
+    badge: z.string().trim().max(60).nullable().default(null),
+    image_path: z.string().trim().min(1).max(2000),
+    active: z.boolean().default(false),
+    category: z.enum(productCategories).nullable().default(null),
+    description: z.string().trim().max(4000).nullable().default(null),
+    ingredients: z.array(text(200)).max(40).nullable().default(null),
+    claims: z.array(text(200)).max(40).nullable().default(null),
+  })
+  .strict();
+export const productSchema = productFields.refine(compareAtValid, compareAtMessage);
+export const productUpdateSchema = productFields
+  .omit({ sku: true })
+  .refine(compareAtValid, compareAtMessage);
+const productPriceFields = z.object({
+  currency: z.enum(extraCurrencies),
+  price: z.number().int().min(0).max(100000000),
+  compare_at: z.number().int().min(0).max(100000000).nullable().default(null),
+});
+export const productPricesSchema = z
+  .object({
+    prices: z
+      .array(
+        productPriceFields
+          .strict()
+          .refine(
+            (v) => v.compare_at === null || v.compare_at >= v.price,
+            "Compare-at price must be at least the selling price",
+          ),
+      )
+      .max(extraCurrencies.length)
+      .refine(
+        (prices) =>
+          new Set(prices.map((p) => p.currency)).size === prices.length,
+        "Duplicate currency",
+      ),
+  })
+  .strict();
+export const createBatchSchema = z
+  .object({
+    product_id: z.uuid(),
+    planned_quantity: z.number().int().min(1).max(1000000),
+    notes: z.string().trim().max(500).default(""),
+  })
+  .strict();
 export type QuoteInput = z.infer<typeof quoteSchema>;
+export interface ProductPrice {
+  currency: ExtraCurrency;
+  price: number;
+  compare_at: number | null;
+}
 export interface Product {
   id: string;
   sku: string;
@@ -89,8 +199,29 @@ export interface Product {
   jar_weight_g: number;
   price: number;
   compare_at: number | null;
+  prices: ProductPrice[];
   badge: string | null;
   image_path: string;
+}
+export interface AdminProduct extends Product {
+  active: boolean;
+  category: ProductCategory | null;
+  description: string | null;
+  ingredients: string[] | null;
+  claims: string[] | null;
+  barcode_value: string | null;
+}
+export type BatchStatus = "planned" | "filled" | "cancelled";
+export interface Batch {
+  id: string;
+  batch_number: string;
+  barcode_value: string | null;
+  product_id: string;
+  product_name: string;
+  planned_quantity: number;
+  filled_quantity: number;
+  status: BatchStatus;
+  created_at: string;
 }
 export interface Quote {
   subtotal: number;
@@ -140,6 +271,7 @@ export interface Order {
   payment_method: string;
   created_at: string;
   eta: string;
+  zone: string;
 }
 export interface OrderItem {
   id: string;
@@ -168,6 +300,17 @@ export interface OrderDetail {
   items: OrderItem[];
   history: History[];
   feedback: Feedback | null;
+}
+export interface Customer {
+  key: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  city: string;
+  address: string;
+  orders: number;
+  spent: number;
+  last_order_at: string;
 }
 export interface Dashboard {
   order_count: number;

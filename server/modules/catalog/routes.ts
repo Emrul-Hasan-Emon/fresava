@@ -15,7 +15,7 @@ export async function handleCatalogRoutes({
       db
         .from("products")
         .select(
-          "id,sku,name,blurb,jars,jar_weight_g,price,compare_at,badge,image_path",
+          "id,sku,name,blurb,jars,jar_weight_g,price,compare_at,badge,image_path,product_prices(currency,price,compare_at)",
         )
         .eq("active", true)
         .order("price"),
@@ -26,7 +26,10 @@ export async function handleCatalogRoutes({
     ]);
     databaseError(products.error);
     databaseError(zones.error);
-    return respond({ products: products.data, zones: zones.data });
+    const withPrices = (products.data ?? []).map(
+      ({ product_prices, ...p }) => ({ ...p, prices: product_prices }),
+    );
+    return respond({ products: withPrices, zones: zones.data });
   }
   if (path === "checkout/quote" && method === "POST") {
     const input = quoteSchema.parse(await body(request));
