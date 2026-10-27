@@ -4,8 +4,14 @@ import type { Html5Qrcode } from "html5-qrcode";
 import { button, secondary, Message } from "@/features/ui";
 export function Scanner({
   onScan,
+  formats = ["CODE_128"],
+  label = "Tracking code",
+  placeholder = "Scan or type FRT…",
 }: {
   onScan: (value: string) => void | Promise<void>;
+  formats?: ("CODE_128" | "EAN_13")[];
+  label?: string;
+  placeholder?: string;
 }) {
   const rawId = useId(),
     id = `scanner-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`,
@@ -50,7 +56,7 @@ export function Scanner({
         await import("html5-qrcode");
       if (!alive.current) return;
       const scanner = new Html5Qrcode(id, {
-        formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128],
+        formatsToSupport: formats.map((f) => Html5QrcodeSupportedFormats[f]),
         verbose: false,
       });
       ref.current = scanner;
@@ -106,13 +112,13 @@ export function Scanner({
         }}
       >
         <label className="flex-1 text-sm">
-          Tracking code
+          {label}
           <input
             required
             maxLength={80}
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="Scan or type FRT…"
+            placeholder={placeholder}
             className="mt-2 block w-full rounded-xl border p-3"
           />
         </label>
