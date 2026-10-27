@@ -71,7 +71,7 @@ export function AdminOrders() {
             }}
           >
             <option value="">All statuses</option>
-            {statuses.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+            {[...statuses, "cancelled"].map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
           </select>
           <button className={button}>Search</button>
         </form>

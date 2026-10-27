@@ -35,9 +35,12 @@ export function ShippingLabel({ id }: { id: string }) {
       </div>
       {data && (
         <article className="shipping-label border-2 border-black bg-white p-4 text-black">
-          <h1 className="text-center font-serif text-3xl tracking-[.2em]">
-            FRESAVA
-          </h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/fresava-shipping-logo.png"
+            alt="FRESAVA"
+            className="mx-auto h-12 w-auto object-contain"
+          />
           <p className="my-2 text-center text-xs">
             SHIPPING LABEL · {data.order.order_number}
           </p>
