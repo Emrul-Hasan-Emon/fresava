@@ -2,7 +2,7 @@ import { z } from "zod";
 import { database } from "../../infrastructure/supabase";
 import { databaseError } from "../../http/errors";
 import type { RouteContext } from "../../http/context";
-import { checkoutSchema, feedbackSchema } from "../../../shared/contracts";
+import { checkoutSchema, feedbackSchema, cancelSchema } from "../../../shared/contracts";
 import { body, rate, id } from "../../http/support";
 import { owner, detail, orderColumns } from "./service";
 export async function handleOrdersRoutes({
@@ -55,13 +55,15 @@ export async function handleOrdersRoutes({
       hasMore: (result.data?.length ?? 0) > 20,
     });
   }
-  const customerOrder = path.match(/^customers\/orders\/([^/]+)(\/feedback)?$/);
+  const customerOrder = path.match(
+    /^customers\/orders\/([^/]+)(\/(feedback|cancel))?$/,
+  );
   if (customerOrder) {
     const orderId = id(customerOrder[1]);
     const access = await owner(request, false, cookies);
     if (method === "GET" && !customerOrder[2])
       return respond(await detail(orderId, access));
-    if (method === "POST" && customerOrder[2]) {
+    if (method === "POST" && customerOrder[3] === "feedback") {
       const input = feedbackSchema.parse(await body(request));
       const result = await db.rpc("submit_feedback", {
         p_order: orderId,
@@ -72,6 +74,18 @@ export async function handleOrdersRoutes({
       });
       databaseError(result.error);
       return respond({ ok: true });
+    }
+    if (method === "POST" && customerOrder[3] === "cancel") {
+      const input = cancelSchema.parse(await body(request));
+      const result = await db.rpc("cancel_order_by_customer", {
+        p_order: orderId,
+        p_customer: access.customer,
+        p_guest: access.guest,
+        p_expected_version: input.expected_version,
+        p_reason: input.reason,
+      });
+      databaseError(result.error);
+      return respond(result.data);
     }
   }
 }

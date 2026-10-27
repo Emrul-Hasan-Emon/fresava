@@ -8,7 +8,7 @@ export interface Owner {
   guest: string | null;
 }
 export const orderColumns =
-  "id,order_number,tracking_code,customer_name,phone,email,address,city,notes,subtotal,discount,shipping,total,status,version,payment_status,payment_method,created_at,eta";
+  "id,order_number,tracking_code,customer_name,phone,email,address,city,notes,subtotal,discount,shipping,total,status,version,payment_status,payment_method,created_at,eta,zone";
 export async function owner(
   request: Request,
   create: boolean,
