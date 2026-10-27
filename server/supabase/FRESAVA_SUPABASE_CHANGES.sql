@@ -141,6 +141,18 @@ call pg_temp.fresava_create_unique_index_if_clean('guest_sessions_token_hash_uni
 
 -- Order workflow reset: authorized by owner on 2026-09-26.
 -- This is the only destructive section in this central schema file.
+-- Guard: abort instead of silently re-dropping live order data if this file
+-- is ever re-run against a database that already has the UUID schema below.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='orders' and column_name='tracking_code'
+  ) then
+    raise exception 'Refusing to run: public.orders already has the UUID/tracking_code schema from this reset. Re-running this block would drop and recreate orders/order_items/order_status_history/fulfillment_requests/order_feedback and destroy their data. Remove this guard only if you intend to wipe order data again.';
+  end if;
+end $$;
+
 drop table if exists public.order_feedback cascade;
 drop table if exists public.fulfillment_requests cascade;
 drop table if exists public.order_status_history cascade;

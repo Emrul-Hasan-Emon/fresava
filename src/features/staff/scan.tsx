@@ -49,7 +49,10 @@ export function StaffScan() {
       setBusy(false);
     }
   }
-  const nextStatus = data ? statuses[statuses.indexOf(data.order.status) + 1] : null;
+  const nextStatus =
+    data && data.order.status !== "cancelled"
+      ? statuses[(statuses as readonly string[]).indexOf(data.order.status) + 1]
+      : null;
   return (
     <div className="mx-auto max-w-4xl">
       <PageTitle

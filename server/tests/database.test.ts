@@ -28,6 +28,14 @@ test(
       for (const file of [
         "202609250001_foundation.sql",
         "202609250002_transactions.sql",
+        "202610260001_order_cancellation.sql",
+        "202610270001_product_images_bucket.sql",
+        "202610280001_product_catalog_fields.sql",
+        "202610290001_manufacturing_batches.sql",
+        "202610300001_product_usd_pricing.sql",
+        "202610310001_product_currency_prices.sql",
+        "202611010001_customer_order_cancel.sql",
+        "202611010002_customer_addresses.sql",
       ])
         await pool.query(
           await readFile(
