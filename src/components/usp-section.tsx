@@ -41,9 +41,9 @@ const USPS = [
 
 export function USPSection({ compact = false }: { compact?: boolean }) {
   return (
-    <section className={compact ? "bg-cream py-20 sm:py-28" : "bg-ink py-24 text-cream sm:py-32"}>
+    <section className={compact ? "bg-cream py-12 sm:py-28" : "bg-ink py-14 text-cream sm:py-32"}>
       <div className="mx-auto max-w-6xl px-6 sm:px-8">
-        <div className="grid gap-14 lg:grid-cols-[0.75fr_1.25fr] lg:gap-24">
+        <div className="grid gap-8 sm:gap-14 lg:grid-cols-[0.75fr_1.25fr] lg:gap-24">
           <Reveal>
             <p className={compact ? "eyebrow text-crimson/70" : "eyebrow text-cream/50"}>
               The Fresava standard
@@ -84,7 +84,7 @@ export function USPSection({ compact = false }: { compact?: boolean }) {
           >
             {USPS.map((usp, i) => (
               <Reveal key={usp.number} delay={i * 55}>
-                <div className="group grid gap-3 py-6 sm:grid-cols-[3.25rem_1fr] sm:gap-5">
+                <div className="group grid gap-2 py-4 sm:grid-cols-[3.25rem_1fr] sm:gap-5 sm:py-6">
                   <span
                     className={
                       compact
@@ -98,8 +98,8 @@ export function USPSection({ compact = false }: { compact?: boolean }) {
                     <h3
                       className={
                         compact
-                          ? "headline text-2xl text-ink transition-colors group-hover:text-crimson"
-                          : "headline text-2xl text-cream transition-colors group-hover:text-crimson-soft"
+                          ? "headline text-xl text-ink transition-colors group-hover:text-crimson sm:text-2xl"
+                          : "headline text-xl text-cream transition-colors group-hover:text-crimson-soft sm:text-2xl"
                       }
                     >
                       {usp.title}
@@ -107,8 +107,8 @@ export function USPSection({ compact = false }: { compact?: boolean }) {
                     <p
                       className={
                         compact
-                          ? "mt-2 max-w-xl text-[0.84rem] leading-relaxed text-ink/55"
-                          : "mt-2 max-w-xl text-[0.84rem] leading-relaxed text-cream/55"
+                          ? "mt-2 max-w-xl text-[0.8rem] leading-relaxed text-ink/55 sm:text-[0.84rem]"
+                          : "mt-2 max-w-xl text-[0.8rem] leading-relaxed text-cream/55 sm:text-[0.84rem]"
                       }
                     >
                       {usp.body}

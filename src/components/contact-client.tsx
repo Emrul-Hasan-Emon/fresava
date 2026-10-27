@@ -7,20 +7,30 @@ import { SiteFooter } from "@/components/site-footer";
 import { PageHero } from "@/components/page-hero";
 import { Reveal } from "@/components/reveal";
 import { cn } from "@/lib/cn";
+import { COUNTRIES } from "@/lib/countries";
 
 const INTENTS = ["Pre-order a jar", "Stock Fresava", "Partnership", "Something else"];
 
 export function ContactClient() {
   const [intent, setIntent] = useState(INTENTS[0]);
   const [sent, setSent] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [dialCode, setDialCode] = useState("+880");
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    country: "Bangladesh",
+    city: "",
+    phone: "",
+    message: "",
+  });
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    window.location.href = `mailto:hello@fresava.com?subject=${encodeURIComponent(intent)}&body=${encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\nPhone: ${form.phone}\n\n${form.message}`)}`;
+    const fullPhone = `${dialCode} ${form.phone}`.trim();
+    window.location.href = `mailto:help@fresava.com?subject=${encodeURIComponent(intent)}&body=${encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\nCountry: ${form.country}\nCity: ${form.city}\nPhone: ${fullPhone}\n\n${form.message}`)}`;
   };
 
   return (
@@ -56,7 +66,14 @@ export function ContactClient() {
                   <button
                     onClick={() => {
                       setSent(false);
-                      setForm({ name: "", email: "", phone: "", message: "" });
+                      setForm({
+                        name: "",
+                        email: "",
+                        country: "Bangladesh",
+                        city: "",
+                        phone: "",
+                        message: "",
+                      });
                     }}
                     className="mt-8 rounded-full border border-crimson/25 px-6 py-2 text-[0.78rem] text-crimson transition-colors hover:bg-crimson hover:text-cream"
                   >
@@ -96,7 +113,50 @@ export function ContactClient() {
                       required
                     />
                   </div>
-                  <Field label="Phone" value={form.phone} onChange={set("phone")} />
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <div>
+                      <label className="text-[0.72rem] tracking-[0.2em] text-ink/45 uppercase">
+                        Country
+                      </label>
+                      <select
+                        value={form.country}
+                        onChange={set("country")}
+                        className="mt-3 w-full border-b border-black/15 bg-transparent pb-3 text-[0.95rem] text-ink outline-none transition-colors focus:border-crimson"
+                      >
+                        {COUNTRIES.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.flag} {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Field label="City" value={form.city} onChange={set("city")} />
+                  </div>
+                  <div>
+                    <label className="text-[0.72rem] tracking-[0.2em] text-ink/45 uppercase">
+                      Phone
+                    </label>
+                    <div className="mt-3 flex items-end gap-3 border-b border-black/15 pb-3 focus-within:border-crimson">
+                      <select
+                        aria-label="Country code"
+                        value={dialCode}
+                        onChange={(e) => setDialCode(e.target.value)}
+                        className="shrink-0 bg-transparent text-[0.95rem] text-ink outline-none"
+                      >
+                        {COUNTRIES.map((c) => (
+                          <option key={`${c.name}-${c.code}`} value={c.code}>
+                            {c.flag} {c.code}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="tel"
+                        value={form.phone}
+                        onChange={set("phone")}
+                        className="w-full min-w-0 bg-transparent text-[0.95rem] text-ink outline-none"
+                      />
+                    </div>
+                  </div>
                   <div>
                     <label className="text-[0.72rem] tracking-[0.2em] text-ink/45 uppercase">
                       Message
@@ -125,15 +185,17 @@ export function ContactClient() {
                 <div>
                   <p className="eyebrow text-crimson/70">Fresava Foods</p>
                   <p className="mt-4 text-[0.92rem] leading-relaxed text-ink/60">
-                    Gulshan, Dhaka 1212
+                    Block-F, Sector-2, House-6,
                     <br />
-                    Bangladesh
+                    Avenue-9, Aftabnagar,
+                    <br />
+                    Dhaka 1212, Bangladesh
                   </p>
                 </div>
                 <div className="space-y-3 border-t border-black/8 pt-8 text-[0.92rem]">
-                  <p className="text-ink">hello@fresava.com</p>
-                  <p className="text-ink">+880 1700 000 000</p>
-                  <p className="text-ink/50">Sat &ndash; Thu &middot; 10:00 &ndash; 19:00</p>
+                  <p className="text-ink">help@fresava.com</p>
+                  <p className="text-ink">+8809658517906</p>
+                  <p className="text-ink/50">Sat &ndash; Thu &middot; 10:00 &ndash; 16:00</p>
                 </div>
                 <div className="border-t border-black/8 pt-8">
                   <p className="eyebrow text-crimson/70">Where to find us</p>

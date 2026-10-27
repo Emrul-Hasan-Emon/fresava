@@ -19,7 +19,7 @@ export function PageHero({
   return (
     <section
       className={cn(
-        "relative flex min-h-[78svh] flex-col items-center justify-center overflow-hidden px-6 pt-28 pb-20 text-center",
+        "relative flex min-h-[78svh] flex-col items-center justify-center overflow-hidden px-5 pt-24 pb-10 text-center sm:px-6 sm:pt-28 sm:pb-20",
         dark ? "bg-crimson-dark text-cream" : "bg-cream text-ink"
       )}
     >
@@ -38,11 +38,11 @@ export function PageHero({
       )}
       <div className="relative z-10 flex flex-col items-center">
         <p className={cn("eyebrow", dark ? "text-cream/60" : "text-crimson/70")}>{eyebrow}</p>
-        <h1 className="headline mt-6 max-w-4xl text-[2.8rem] sm:text-7xl">{title}</h1>
+        <h1 className="headline mt-6 max-w-4xl text-[clamp(1.85rem,7.5vw,2.2rem)] leading-[1.12] sm:text-7xl sm:leading-normal">{title}</h1>
         {sub && (
           <p
             className={cn(
-              "mt-7 max-w-xl text-[0.95rem] leading-relaxed",
+              "mt-4 max-w-[330px] text-[0.95rem] leading-relaxed sm:mt-7 sm:max-w-xl",
               dark ? "text-cream/70" : "text-ink/60"
             )}
           >

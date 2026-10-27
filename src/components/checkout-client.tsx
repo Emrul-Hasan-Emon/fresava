@@ -2,8 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
+import { useMarket } from "@/lib/market-context";
 import { api } from "@/lib/api/client";
 import { type Quote, type OrderDetail, money } from "@shared/contracts";
+import { COUNTRIES } from "@/lib/countries";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import {
@@ -21,7 +23,10 @@ import { OrderContent } from "@/features/orders/detail";
 
 export function CheckoutClient() {
   const { lines, hydrated, clear, promo, applyPromo, promoError } = useCart();
-  const [zone, setZone] = useState("dhaka"),
+  const { market } = useMarket();
+  const [dialCode, setDialCode] = useState("+880"),
+    [phoneNumber, setPhoneNumber] = useState(""),
+    [zone, setZone] = useState("dhaka"),
     [quoteResult, setQuoteResult] = useState<{ key: string; quote: Quote | null; error: string } | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -54,7 +59,8 @@ export function CheckoutClient() {
     setBusy(true);
     setError("");
     const values = new FormData(e.currentTarget);
-    const customer = Object.fromEntries(["name", "phone", "email", "address", "city", "notes"].map((k) => [k, String(values.get(k) ?? "")])) ;
+    const customer = Object.fromEntries(["name", "email", "address", "city", "notes"].map((k) => [k, String(values.get(k) ?? "")]));
+    customer.phone = `${dialCode} ${phoneNumber}`.trim();
     const payload = { quote: { lines: lines.map((l) => ({ sku: l.id, quantity: l.qty })), zone, promo }, customer };
     const encoded = JSON.stringify(payload);
     if (!pending.current || pending.current.payload !== encoded) pending.current = { key: crypto.randomUUID(), payload: encoded };
@@ -81,6 +87,17 @@ export function CheckoutClient() {
             </PageTitle>
             <OrderContent data={order} />
           </>
+        ) : market !== "BD" ? (
+          <Card className="text-center">
+            <p className="eyebrow text-crimson/70">Bangladesh only</p>
+            <h1 className="headline mx-auto mt-4 max-w-2xl text-4xl text-ink">
+              We currently accept orders within Bangladesh only.
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-sm text-ink/60">
+              USD pricing on the Spread page is shown for reference. Switch
+              back to BDT to check out and arrange Cash on Delivery.
+            </p>
+          </Card>
         ) : !hydrated ? (
           <Card><p role="status" className="text-sm text-ink/60">Loading your bag…</p></Card>
         ) : !lines.length ? (
@@ -109,7 +126,33 @@ export function CheckoutClient() {
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <Field name="name" label="Full name" autoComplete="name" required maxLength={120} />
-                  <Field name="phone" label="Phone" type="tel" autoComplete="tel" required maxLength={20} />
+                  <label className="block text-[0.78rem] font-semibold tracking-wide text-ink/70">
+                    Phone
+                    <div className="mt-2 flex gap-2">
+                      <select
+                        aria-label="Country code"
+                        value={dialCode}
+                        onChange={(e) => setDialCode(e.target.value)}
+                        className="w-[6.5rem] shrink-0 rounded-2xl border border-ink/10 bg-white/85 px-2 py-3.5 text-sm text-ink outline-none focus:border-crimson/50 focus:ring-4 focus:ring-crimson/10"
+                      >
+                        {COUNTRIES.map((c) => (
+                          <option key={`${c.name}-${c.code}`} value={c.code}>
+                            {c.flag} {c.code}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="tel"
+                        aria-label="Phone number"
+                        autoComplete="tel"
+                        required
+                        maxLength={20}
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className="w-full min-w-0 rounded-2xl border border-ink/10 bg-white/85 px-4 py-3.5 text-sm text-ink shadow-inner shadow-black/[0.02] outline-none transition focus:border-crimson/50 focus:bg-white focus:ring-4 focus:ring-crimson/10"
+                      />
+                    </div>
+                  </label>
                   <Field name="email" label="Email (optional)" type="email" autoComplete="email" maxLength={254} />
                   <Field name="city" label="City" defaultValue="Dhaka" autoComplete="address-level2" required maxLength={100} />
                 </div>

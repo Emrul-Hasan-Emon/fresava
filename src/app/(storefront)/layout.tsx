@@ -1,4 +1,5 @@
 import { CartProvider } from "@/lib/cart-context";
+import { MarketProvider } from "@/lib/market-context";
 import { CartDrawer } from "@/components/cart-drawer";
 import { OrderNow } from "@/components/order-now";
 export default function StorefrontLayout({
@@ -7,10 +8,12 @@ export default function StorefrontLayout({
   children: React.ReactNode;
 }) {
   return (
-    <CartProvider>
-      {children}
-      <CartDrawer />
-      <OrderNow />
-    </CartProvider>
+    <MarketProvider>
+      <CartProvider>
+        {children}
+        <CartDrawer />
+        <OrderNow />
+      </CartProvider>
+    </MarketProvider>
   );
 }

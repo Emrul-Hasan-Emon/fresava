@@ -48,10 +48,12 @@ export function CartDrawer() {
             <img
               src="/images/empty-trolley.png"
               alt=""
-              className="blend-multiply h-40 w-auto object-contain opacity-90"
+              className="h-55 w-auto object-contain opacity-90 [animation:float_3s_ease-in-out_infinite]"
             />
-            <p className="headline mt-8 text-3xl text-ink">Nothing here yet.</p>
-            <p className="mt-3 max-w-[26ch] text-sm leading-relaxed text-ink/55">
+            <p className="headline mt-7 text-3xl text-ink [animation:fadeUp_0.7s_ease-out_both]">
+              Nothing here yet.
+            </p>
+            <p className="mt-3 max-w-[30ch] text-sm leading-relaxed text-ink/55 [animation:fadeUp_0.9s_ease-out_both]">
               Your little jar of happiness is waiting to come home.
             </p>
             <Link

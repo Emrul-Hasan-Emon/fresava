@@ -75,6 +75,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
             size: `${p.jars} × ${p.jar_weight_g} g`,
             price: p.price / 100,
             compareAt: p.compare_at ? p.compare_at / 100 : undefined,
+            prices: p.prices.map((pr) => ({
+              currency: pr.currency,
+              price: pr.price / 100,
+              compareAt: pr.compare_at ? pr.compare_at / 100 : undefined,
+            })),
             badge: p.badge ?? undefined,
             blurb: p.blurb,
           })),
