@@ -20,6 +20,7 @@ export interface Principal {
 export interface Session {
   access_token: string;
   refresh_token: string;
+  supabase_access_token: string;
 }
 type AccountRow = {
   id: string;
@@ -46,6 +47,7 @@ async function mintSession(
   kind: AuthAccountType,
   authUserId: string,
   supabaseRefreshToken: string,
+  supabaseAccessToken: string,
   role?: StaffRole,
 ): Promise<Session> {
   const entity = await loadAccount(kind, authUserId);
@@ -63,7 +65,11 @@ async function mintSession(
     c.jwtSecret,
     ACCESS_TOKEN_TTL,
   );
-  return { access_token, refresh_token: supabaseRefreshToken };
+  return {
+    access_token,
+    refresh_token: supabaseRefreshToken,
+    supabase_access_token: supabaseAccessToken,
+  };
 }
 export async function verify(
   token: string,
@@ -124,7 +130,13 @@ export async function login(
   });
   if (error || !data.session || !data.user)
     throw new HttpError(401, "Invalid credentials or unconfirmed email.");
-  return mintSession(kind, data.user.id, data.session.refresh_token, role);
+  return mintSession(
+    kind,
+    data.user.id,
+    data.session.refresh_token,
+    data.session.access_token,
+    role,
+  );
 }
 export async function refresh(
   request: Request,
@@ -138,17 +150,30 @@ export async function refresh(
   });
   if (error || !data.session || !data.user)
     throw new HttpError(401, "Please sign in again.");
-  return mintSession(kind, data.user.id, data.session.refresh_token, role);
+  return mintSession(
+    kind,
+    data.user.id,
+    data.session.refresh_token,
+    data.session.access_token,
+    role,
+  );
 }
 export async function mintFromAuthUser(
   kind: AuthAccountType,
   authUserId: string,
   supabaseRefreshToken: string,
+  supabaseAccessToken: string,
   role?: StaffRole,
 ) {
-  return mintSession(kind, authUserId, supabaseRefreshToken, role);
+  return mintSession(
+    kind,
+    authUserId,
+    supabaseRefreshToken,
+    supabaseAccessToken,
+    role,
+  );
 }
-export async function revoke(principal: Principal, supabaseRefreshToken?: string) {
+export async function revoke(principal: Principal, supabaseAccessToken?: string) {
   const db = database();
   const result = await db.from("revoked_auth_sessions").upsert({
     session_id: principal.sessionId,
@@ -156,11 +181,11 @@ export async function revoke(principal: Principal, supabaseRefreshToken?: string
     expires_at: new Date(Date.now() + 86400 * 30 * 1000).toISOString(),
   });
   databaseError(result.error);
-  if (supabaseRefreshToken) {
-    const { data } = await authProvider().auth.refreshSession({
-      refresh_token: supabaseRefreshToken,
-    });
-    if (data.session)
-      await db.auth.admin.signOut(data.session.access_token, "local");
+  if (supabaseAccessToken) {
+    try {
+      await db.auth.admin.signOut(supabaseAccessToken, "local");
+    } catch {
+      // Best-effort: local revocation above is the enforced guarantee.
+    }
   }
 }

@@ -19,7 +19,9 @@ import {
   requireAccount,
   mintFromAuthUser,
 } from "./service";
-import { cookieName, readCookie, sessionCookies } from "../../http/cookies";
+import { cookie, cookieName, readCookie, sessionCookies } from "../../http/cookies";
+import { createPkcePair, googleAuthorizeUrl, exchangeGoogleCode } from "./google";
+const GOOGLE_VERIFIER_COOKIE = "fresava_google_verifier";
 export async function handleAuthRoutes({
   request,
   path,
@@ -28,6 +30,28 @@ export async function handleAuthRoutes({
   respond,
 }: RouteContext) {
   const c = config();
+  if (path === "customers/auth/google" && method === "GET") {
+    await rate(request, "auth:customer:google", 20, 300);
+    const { verifier, challenge } = createPkcePair();
+    const headers = new Headers({ Location: googleAuthorizeUrl(challenge) });
+    headers.append("Set-Cookie", cookie(GOOGLE_VERIFIER_COOKIE, verifier, 300));
+    return new Response(null, { status: 302, headers });
+  }
+  if (path === "customers/auth/google/callback" && method === "POST") {
+    await rate(request, "auth:customer:google", 20, 300);
+    const input = z.object({ code: z.string().trim().min(1).max(2000) }).parse(
+      await body(request),
+    );
+    const verifier = readCookie(request, GOOGLE_VERIFIER_COOKIE);
+    if (!verifier) throw new HttpError(401, "This sign-in link has expired. Try again.");
+    const { userId, accessToken, refreshToken } = await exchangeGoogleCode(
+      input.code,
+      verifier,
+    );
+    const session = await mintFromAuthUser("customer", userId, refreshToken, accessToken);
+    cookies.push(cookie(GOOGLE_VERIFIER_COOKIE, "", 0), ...sessionCookies("customer", session));
+    return respond({ ok: true });
+  }
   const authMatch = path.match(
     /^(customers|admin|staff)\/auth\/(signup|login|refresh|logout|session|recovery|reset|callback)$/,
   );
@@ -74,7 +98,7 @@ export async function handleAuthRoutes({
     if (action === "logout") {
       const token = readCookie(request, cookieName(kind, "access"));
       let p;
-      let refreshToken = readCookie(request, cookieName(kind, "refresh"));
+      let supabaseAccessToken = readCookie(request, cookieName(kind, "supabase"));
       if (token) {
         try {
           p = await verify(token, kind, role);
@@ -83,17 +107,17 @@ export async function handleAuthRoutes({
             throw error;
         }
       }
-      if (!p && refreshToken) {
+      if (!p && readCookie(request, cookieName(kind, "refresh"))) {
         try {
           const s = await refresh(request, kind, role);
           p = await verify(s.access_token, kind, role);
-          refreshToken = s.refresh_token;
+          supabaseAccessToken = s.supabase_access_token;
         } catch (error) {
           if (!(error instanceof HttpError) || error.status !== 401)
             throw error;
         }
       }
-      if (p) await revoke(p, refreshToken);
+      if (p) await revoke(p, supabaseAccessToken);
       cookies.push(...sessionCookies(kind, null));
       return respond({ ok: true });
     }
@@ -119,6 +143,7 @@ export async function handleAuthRoutes({
           "customer",
           data.user.id,
           data.session.refresh_token,
+          data.session.access_token,
         );
         cookies.push(...sessionCookies(kind, session));
       }
@@ -155,6 +180,7 @@ export async function handleAuthRoutes({
         kind,
         result.data.user.id,
         result.data.session.refresh_token,
+        result.data.session.access_token,
         role,
       );
       cookies.push(...sessionCookies(kind, session));
@@ -169,7 +195,7 @@ export async function handleAuthRoutes({
         password,
       });
       databaseError(result.error);
-      await revoke(p, readCookie(request, cookieName(kind, "refresh")));
+      await revoke(p, readCookie(request, cookieName(kind, "supabase")));
       cookies.push(...sessionCookies(kind, null));
       return respond({ message: "Password updated. Please sign in again." });
     }
