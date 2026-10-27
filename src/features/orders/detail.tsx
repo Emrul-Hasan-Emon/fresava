@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useResource } from "@/features/use-resource";
@@ -21,16 +22,41 @@ import {
   TextArea,
 } from "@/features/ui";
 
+const ZONE_LABEL: Record<string, string> = {
+  dhaka: "Inside Dhaka",
+  outside: "Outside Dhaka",
+};
+
 export function OrderContent({ data }: { data: OrderDetail }) {
   const { order, items, history } = data;
-  const activeIndex = statuses.indexOf(order.status);
+  const [copied, setCopied] = useState(false);
+  const cancelled = order.status === "cancelled";
+  const indexOfStatus = (s: string) =>
+    (statuses as readonly string[]).indexOf(s);
+  const activeIndex = cancelled
+    ? history.reduce((max, h) => Math.max(max, indexOfStatus(h.to_status)), -1)
+    : indexOfStatus(order.status);
   return (
     <>
       <div className="mb-6 overflow-hidden rounded-[2rem] bg-crimson-dark p-6 text-cream shadow-[0_24px_80px_rgba(47,20,13,0.18)] sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div>
             <p className="eyebrow text-cream/45">Tracking number</p>
-            <p className="mt-4 break-all font-mono text-lg text-cream sm:text-2xl">{order.tracking_code}</p>
+            <div className="mt-4 flex items-center gap-3">
+              <p className="break-all font-mono text-lg text-cream sm:text-2xl">{order.tracking_code}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(order.tracking_code).then(() => {
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  });
+                }}
+                className="shrink-0 rounded-full border border-cream/20 px-3 py-1 text-xs font-semibold text-cream/80 transition hover:bg-cream/10"
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
             <div className="mt-6 inline-flex rounded-full border border-cream/15 bg-cream/10 px-4 py-2 text-sm font-semibold text-cream">
               {statusLabel(order.status)}
             </div>
@@ -59,15 +85,35 @@ export function OrderContent({ data }: { data: OrderDetail }) {
           <h2 className="headline mt-3 text-3xl text-ink">Your items</h2>
           <ul className="mt-5 divide-y divide-ink/8">
             {items.map((i) => (
-              <li key={i.id} className="flex justify-between gap-4 py-4 text-sm">
-                <div>
-                  <p className="font-semibold text-ink">{i.product_name}</p>
-                  <small className="mt-1 block text-ink/48">{i.jars} × {i.jar_weight_g} g · quantity {i.quantity}</small>
+              <li key={i.id} className="flex items-center justify-between gap-4 py-4 text-sm">
+                <div className="flex items-center gap-4">
+                  <img
+                    src="/images/jar-hero.png"
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-xl bg-cream object-contain p-1"
+                  />
+                  <div>
+                    <p className="font-semibold text-ink">{i.product_name}</p>
+                    <small className="mt-1 block text-ink/48">{i.jars} × {i.jar_weight_g} g · quantity {i.quantity}</small>
+                  </div>
                 </div>
                 <span className="font-semibold text-ink">{money(i.subtotal)}</span>
               </li>
             ))}
           </ul>
+          <dl className="mt-4 space-y-3 rounded-2xl bg-white/60 p-5 text-sm">
+            {[
+              ["Order date", new Date(order.created_at).toLocaleDateString()],
+              ["Payment method", "Cash on delivery"],
+              ["Items", `${items.length} ${items.length === 1 ? "product" : "products"}`],
+              ["Delivery zone", ZONE_LABEL[order.zone] ?? order.zone],
+            ].map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-4">
+                <dt className="text-ink/56">{k}</dt>
+                <dd className="font-semibold text-ink">{v}</dd>
+              </div>
+            ))}
+          </dl>
           <dl className="mt-4 space-y-3 rounded-3xl bg-cream/65 p-5 text-sm">
             {[
               ["Subtotal", order.subtotal],
@@ -86,6 +132,17 @@ export function OrderContent({ data }: { data: OrderDetail }) {
       <Card className="mt-6">
         <p className="eyebrow text-crimson/70">Fulfillment journey</p>
         <h2 className="headline mt-3 text-3xl text-ink">From confirmation to delivery</h2>
+        {cancelled && (
+          <p className="mt-4 rounded-2xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-800">
+            This order was cancelled
+            {history.find((h) => h.to_status === "cancelled")?.created_at
+              ? ` on ${new Date(
+                  history.find((h) => h.to_status === "cancelled")!.created_at,
+                ).toLocaleString()}`
+              : ""}
+            .
+          </p>
+        )}
         <ol className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statuses.map((s, i) => {
             const event = history.find((h) => h.to_status === s);
@@ -115,8 +172,35 @@ export function OrderDetailPage({ id, kind }: { id: string; kind: AccountType })
   const prefix = kind === "customer" ? "customers" : kind;
   const { data, error, loading, reload } = useResource<OrderDetail>(`${prefix}/orders/${id}`, kind);
   const [actionError, setActionError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [cancelling, setCancelling] = useState(false);
   const form = useRef<HTMLFormElement>(null);
+  async function cancelOrder(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!data) return;
+    const reason = new FormData(e.currentTarget).get("reason");
+    setBusy(true);
+    setActionError("");
+    try {
+      await api(
+        kind === "admin"
+          ? `admin/orders/${id}/cancel`
+          : `customers/orders/${id}/cancel`,
+        {
+          method: "POST",
+          kind,
+          body: { expected_version: data.order.version, reason },
+        },
+      );
+      setCancelling(false);
+      reload();
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const CANCELLABLE_BY_CUSTOMER = ["order_confirmed", "ready_for_packing"];
   async function feedback(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const values = new FormData(e.currentTarget);
@@ -172,6 +256,28 @@ export function OrderDetailPage({ id, kind }: { id: string; kind: AccountType })
                 Record COD collected
               </button>
             )}
+            {kind !== "staff" &&
+              (kind === "admin"
+                ? data.order.status !== "delivered" &&
+                  data.order.status !== "cancelled"
+                : CANCELLABLE_BY_CUSTOMER.includes(data.order.status)) &&
+              (cancelling ? (
+                <Card className="mt-6">
+                  <p className="eyebrow text-crimson/70">Cancel order</p>
+                  <h2 className="headline mt-3 text-3xl text-ink">Why is this order being cancelled?</h2>
+                  <form onSubmit={cancelOrder} className="mt-6 space-y-5">
+                    <TextArea name="reason" required maxLength={500} rows={3} label="Reason" />
+                    <div className="flex flex-wrap gap-3">
+                      <button className={button} disabled={busy}>{busy ? "Cancelling…" : "Confirm cancellation"}</button>
+                      <button type="button" className={secondary} disabled={busy} onClick={() => setCancelling(false)}>Keep order</button>
+                    </div>
+                  </form>
+                </Card>
+              ) : (
+                <button className={`${secondary} mt-6`} onClick={() => setCancelling(true)}>
+                  Cancel order
+                </button>
+              ))}
             {kind === "customer" && data.order.status === "delivered" && (
               <Card className="mt-6">
                 <p className="eyebrow text-crimson/70">Aftertaste</p>
