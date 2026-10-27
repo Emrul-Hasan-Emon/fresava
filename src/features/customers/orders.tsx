@@ -12,12 +12,31 @@ function statusTone(status: string) {
   return "bg-crimson/8 text-crimson border-crimson/15";
 }
 
+const FILTERS = [
+  { id: "all", label: "All" },
+  { id: "active", label: "Active" },
+  { id: "history", label: "History" },
+] as const;
+
 export function CustomerOrders() {
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [copied, setCopied] = useState<string | null>(null);
   const { data, error, loading, reload } = useResource<{
     orders: Order[];
     hasMore: boolean;
   }>(`customers/orders?page=${page}`, "customer");
+  const visibleOrders = (data?.orders ?? []).filter((o) => {
+    if (filter === "active") return o.status !== "delivered" && o.status !== "cancelled";
+    if (filter === "history") return o.status === "delivered" || o.status === "cancelled";
+    return true;
+  });
+  function copyReference(code: string) {
+    navigator.clipboard?.writeText(code).then(() => {
+      setCopied(code);
+      setTimeout(() => setCopied(null), 1500);
+    });
+  }
   return (
     <>
       <PageTitle
@@ -48,6 +67,19 @@ export function CustomerOrders() {
           />
         </div>
       </div>
+      <div className="mb-5 inline-flex rounded-full border border-ink/10 bg-white/60 p-1">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`rounded-full px-4 py-1.5 text-[0.78rem] font-medium transition-colors ${
+              filter === f.id ? "bg-crimson text-cream" : "text-ink/55 hover:text-ink"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
       <Message error>{error}</Message>
       {loading ? (
         <Card>
@@ -58,16 +90,23 @@ export function CustomerOrders() {
       ) : (
         <>
           <div className="grid gap-5 md:grid-cols-2">
-            {data?.orders.map((o) => (
+            {visibleOrders.map((o) => (
               <Card key={o.id} className="group transition hover:-translate-y-1 hover:shadow-[0_30px_90px_rgba(47,20,13,0.14)]">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="eyebrow text-crimson/60">{o.order_number}</p>
-                    <h2 className="headline mt-3 text-3xl text-ink">{statusLabel(o.status)}</h2>
+                <div className="flex items-start gap-4">
+                  <img
+                    src="/images/jar-hero.png"
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-2xl bg-cream object-contain p-1"
+                  />
+                  <div className="flex flex-1 items-start justify-between gap-4">
+                    <div>
+                      <p className="eyebrow text-crimson/60">{o.order_number}</p>
+                      <h2 className="headline mt-3 text-3xl text-ink">{statusLabel(o.status)}</h2>
+                    </div>
+                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(o.status)}`}>
+                      {statusLabel(o.status)}
+                    </span>
                   </div>
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(o.status)}`}>
-                    {statusLabel(o.status)}
-                  </span>
                 </div>
                 <div className="mt-6 grid gap-3 rounded-3xl bg-cream/70 p-4 text-sm text-ink/68 sm:grid-cols-2">
                   <div>
@@ -79,15 +118,27 @@ export function CustomerOrders() {
                     <strong className="mt-1 block text-base text-ink">{new Date(o.created_at).toLocaleDateString()}</strong>
                   </div>
                 </div>
-                <p className="mt-5 break-all rounded-2xl border border-ink/8 bg-white/60 px-4 py-3 font-mono text-xs text-ink/55">
-                  {o.tracking_code}
-                </p>
+                <div className="mt-5 flex items-center gap-2 rounded-2xl border border-ink/8 bg-white/60 px-4 py-3">
+                  <p className="flex-1 break-all font-mono text-xs text-ink/55">{o.tracking_code}</p>
+                  <button
+                    type="button"
+                    onClick={() => copyReference(o.tracking_code)}
+                    className="shrink-0 text-xs font-semibold text-crimson underline-offset-2 hover:underline"
+                  >
+                    {copied === o.tracking_code ? "Copied" : "Copy"}
+                  </button>
+                </div>
                 <Link className={`${button} mt-5 w-full sm:w-auto`} href={`/orders/${o.id}`}>
                   Track order
                 </Link>
               </Card>
             ))}
           </div>
+          {!visibleOrders.length && (data?.orders.length ?? 0) > 0 && (
+            <Card className="text-center">
+              <p className="text-sm text-ink/55">No orders match this filter.</p>
+            </Card>
+          )}
           {!data?.orders.length && (
             <Card className="text-center">
               <p className="eyebrow text-crimson/70">Nothing here yet</p>
