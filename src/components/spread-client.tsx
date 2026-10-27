@@ -7,7 +7,8 @@ import { IMG } from "@/lib/assets";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
-import { formatBDT } from "@/lib/products";
+import { formatBDT, formatCurrency } from "@/lib/products";
+import { useMarket, MARKETS } from "@/lib/market-context";
 import { Reveal } from "@/components/reveal";
 import { PageHero } from "@/components/page-hero";
 import { USPSection } from "@/components/usp-section";
@@ -57,11 +58,29 @@ export function SpreadClient() {
   const [variantId, setVariantId] = useState("duo");
   const [qty, setQty] = useState(1);
   const { add, products: SHOP_PRODUCTS } = useCart();
+  const { market, setMarket } = useMarket();
   const router = useRouter();
 
   const rows = tab === "specs" ? SPECS : NUTRITION;
   const variant =
     SHOP_PRODUCTS.find((p) => p.id === variantId) ?? SHOP_PRODUCTS[0];
+
+  type Priced = { price: number; compareAt?: number; prices: { currency: string; price: number; compareAt?: number }[] };
+  function unitAmount(p: Priced, which: "price" | "compareAt") {
+    if (market !== "BD") {
+      const found = p.prices.find((x) => x.currency === market);
+      const value = which === "price" ? found?.price : found?.compareAt;
+      if (value !== undefined) return { amount: value, currency: market };
+    }
+    const bdt = which === "price" ? p.price : p.compareAt;
+    return bdt !== undefined ? { amount: bdt, currency: "BDT" } : undefined;
+  }
+  function formatUnit(p: Priced, which: "price" | "compareAt", qty = 1) {
+    const unit = unitAmount(p, which);
+    if (!unit) return undefined;
+    const total = unit.amount * qty;
+    return unit.currency === "BDT" ? formatBDT(total) : formatCurrency(total, unit.currency);
+  }
 
   const scrollToBuy = () => {
     document
@@ -152,6 +171,28 @@ export function SpreadClient() {
                 breakfasts · No added sugar · Pure Black Cumin honey
               </p>
 
+              <label className="mt-5 block text-[0.72rem] font-medium tracking-wide text-ink/55">
+                Display currency
+                <select
+                  aria-label="Display currency"
+                  value={market}
+                  onChange={(e) => setMarket(e.target.value as typeof market)}
+                  className="mt-1.5 block rounded-full border border-ink/10 bg-white px-4 py-1.5 text-[0.78rem] font-medium text-ink outline-none focus:border-crimson/50"
+                >
+                  {MARKETS.map((m) => (
+                    <option key={m.code} value={m.code}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {market !== "BD" && (
+                <p className="mt-2 text-[0.72rem] text-ink/45">
+                  Pricing shown for reference. Orders currently ship within
+                  Bangladesh only.
+                </p>
+              )}
+
               {/* variants */}
               <div className="mt-8 grid gap-2.5">
                 {SHOP_PRODUCTS.map((p) => (
@@ -178,11 +219,11 @@ export function SpreadClient() {
                     </span>
                     <span className="text-right">
                       <span className="block text-[0.95rem] font-medium text-ink">
-                        {formatBDT(p.price)}
+                        {formatUnit(p, "price")}
                       </span>
                       {p.compareAt && (
                         <span className="block text-[0.72rem] text-ink/35 line-through">
-                          {formatBDT(p.compareAt)}
+                          {formatUnit(p, "compareAt")}
                         </span>
                       )}
                     </span>
@@ -212,11 +253,11 @@ export function SpreadClient() {
                   </button>
                 </div>
                 <p className="headline text-3xl text-ink">
-                  {formatBDT(variant.price * qty)}
+                  {formatUnit(variant, "price", qty)}
                 </p>
                 {variant.compareAt && (
                   <p className="text-sm text-ink/35 line-through">
-                    {formatBDT(variant.compareAt * qty)}
+                    {formatUnit(variant, "compareAt", qty)}
                   </p>
                 )}
               </div>
