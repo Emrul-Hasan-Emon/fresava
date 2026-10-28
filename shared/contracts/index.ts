@@ -147,6 +147,7 @@ const productFields = z
     description: z.string().trim().max(4000).nullable().default(null),
     ingredients: z.array(text(200)).max(40).nullable().default(null),
     claims: z.array(text(200)).max(40).nullable().default(null),
+    stock_quantity: z.number().int().min(0).max(100000000).default(0),
   })
   .strict();
 export const productSchema = productFields.refine(compareAtValid, compareAtMessage);
@@ -210,8 +211,17 @@ export interface AdminProduct extends Product {
   ingredients: string[] | null;
   claims: string[] | null;
   barcode_value: string | null;
+  stock_quantity: number;
 }
-export type BatchStatus = "planned" | "filled" | "cancelled";
+export type BatchStatus =
+  | "planned"
+  | "in_production"
+  | "awaiting_qc"
+  | "qc_approved"
+  | "qc_held"
+  | "qc_rejected"
+  | "completed"
+  | "cancelled";
 export interface Batch {
   id: string;
   batch_number: string;
@@ -220,8 +230,71 @@ export interface Batch {
   product_name: string;
   planned_quantity: number;
   filled_quantity: number;
+  rejected_quantity: number | null;
+  held_quantity: number | null;
+  manufacturing_date: string | null;
+  expiry_date: string | null;
   status: BatchStatus;
   created_at: string;
+}
+export const confirmManufacturingSchema = z
+  .object({
+    batch_id: z.uuid(),
+    filled_quantity: z.number().int().min(0).max(1000000),
+    rejected_quantity: z.number().int().min(0).max(1000000),
+    held_quantity: z.number().int().min(0).max(1000000),
+    manufacturing_date: z.iso.date(),
+    expiry_date: z.iso.date(),
+    notes: z.string().trim().max(500).nullable().default(null),
+  })
+  .strict();
+export const qcDecisions = ["approved", "held", "rejected"] as const;
+export const approveQcSchema = z
+  .object({
+    batch_id: z.uuid(),
+    decision: z.enum(qcDecisions),
+    released_quantity: z.number().int().min(0).max(1000000),
+    packaging_passed: z.boolean(),
+    seal_passed: z.boolean(),
+    labeling_passed: z.boolean(),
+    lab_testing_passed: z.boolean(),
+    documentation_passed: z.boolean(),
+    remarks: z.string().trim().max(500).nullable().default(null),
+  })
+  .strict();
+export const receiveStockSchema = z
+  .object({
+    batch_barcode: text(80),
+    received_quantity: z.number().int().min(1).max(1000000),
+    warehouse_location: text(120),
+    idempotency_key: z.uuid(),
+    notes: z.string().trim().max(500).nullable().default(null),
+  })
+  .strict();
+export interface QcCheck {
+  id: string;
+  batch_id: string;
+  packaging_passed: boolean;
+  seal_passed: boolean;
+  labeling_passed: boolean;
+  lab_testing_passed: boolean;
+  documentation_passed: boolean;
+  decision: (typeof qcDecisions)[number];
+  released_quantity: number;
+  remarks: string | null;
+  reviewed_at: string;
+}
+export interface InventoryLot {
+  id: string;
+  batch_id: string;
+  batch_number: string;
+  product_id: string;
+  product_name: string;
+  warehouse_location: string;
+  received_quantity: number;
+  available_quantity: number;
+  reserved_quantity: number;
+  updated_at: string;
 }
 export interface Quote {
   subtotal: number;

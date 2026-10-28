@@ -10,8 +10,12 @@ import {
   productUpdateSchema,
   productPricesSchema,
   createBatchSchema,
+  confirmManufacturingSchema,
+  approveQcSchema,
+  receiveStockSchema,
   type Customer,
   type Batch,
+  type InventoryLot,
 } from "../../../shared/contracts";
 import { body, id, rate } from "../../http/support";
 import { requireAdmin } from "./auth";
@@ -150,7 +154,7 @@ export async function handleAdminRoutes({
       const result = await db
         .from("products")
         .select(
-          "id,sku,name,blurb,jars,jar_weight_g,price,compare_at,badge,image_path,active,category,description,ingredients,claims,barcode_value,product_prices(currency,price,compare_at)",
+          "id,sku,name,blurb,jars,jar_weight_g,price,compare_at,badge,image_path,active,category,description,ingredients,claims,barcode_value,stock_quantity,product_prices(currency,price,compare_at)",
         )
         .order("name");
       databaseError(result.error);
@@ -243,7 +247,7 @@ export async function handleAdminRoutes({
       const result = await db
         .from("production_batches")
         .select(
-          "id,batch_number,barcode_value,planned_quantity,filled_quantity,status,created_at,product_id,products(name)",
+          "id,batch_number,barcode_value,planned_quantity,filled_quantity,rejected_quantity,held_quantity,manufacturing_date,expiry_date,status,created_at,product_id,products(name)",
         )
         .order("created_at", { ascending: false })
         .limit(100);
@@ -254,6 +258,10 @@ export async function handleAdminRoutes({
         barcode_value: b.barcode_value,
         planned_quantity: b.planned_quantity,
         filled_quantity: b.filled_quantity,
+        rejected_quantity: b.rejected_quantity,
+        held_quantity: b.held_quantity,
+        manufacturing_date: b.manufacturing_date,
+        expiry_date: b.expiry_date,
         status: b.status,
         created_at: b.created_at,
         product_id: b.product_id,
@@ -261,6 +269,80 @@ export async function handleAdminRoutes({
           (b.products as unknown as { name: string } | null)?.name ?? "",
       }));
       return respond({ batches });
+    }
+    if (path === "admin/batches/confirm-manufacturing" && method === "POST") {
+      const input = confirmManufacturingSchema.parse(await body(request));
+      const result = await db.rpc("confirm_fresava_batch_manufacturing", {
+        p_admin: p.id,
+        p_batch_id: input.batch_id,
+        p_filled_quantity: input.filled_quantity,
+        p_rejected_quantity: input.rejected_quantity,
+        p_held_quantity: input.held_quantity,
+        p_manufacturing_date: input.manufacturing_date,
+        p_expiry_date: input.expiry_date,
+        p_notes: input.notes,
+      });
+      databaseError(result.error);
+      return respond(result.data);
+    }
+    if (path === "admin/batches/qc" && method === "POST") {
+      const input = approveQcSchema.parse(await body(request));
+      const result = await db.rpc("approve_fresava_batch_qc", {
+        p_admin: p.id,
+        p_batch_id: input.batch_id,
+        p_decision: input.decision,
+        p_released_quantity: input.released_quantity,
+        p_packaging_passed: input.packaging_passed,
+        p_seal_passed: input.seal_passed,
+        p_labeling_passed: input.labeling_passed,
+        p_lab_testing_passed: input.lab_testing_passed,
+        p_documentation_passed: input.documentation_passed,
+        p_remarks: input.remarks,
+      });
+      databaseError(result.error);
+      return respond(result.data);
+    }
+    if (path === "admin/batches/receive-stock" && method === "POST") {
+      const input = receiveStockSchema.parse(await body(request));
+      const result = await db.rpc("receive_fresava_batch_stock", {
+        p_admin: p.id,
+        p_batch_barcode: input.batch_barcode,
+        p_received_quantity: input.received_quantity,
+        p_warehouse_location: input.warehouse_location,
+        p_idempotency_key: input.idempotency_key,
+        p_notes: input.notes,
+      });
+      databaseError(result.error);
+      return respond(result.data);
+    }
+    if (path === "admin/inventory" && method === "GET") {
+      const result = await db
+        .from("inventory_lots")
+        .select(
+          "id,batch_id,warehouse_location,received_quantity,available_quantity,reserved_quantity,updated_at,production_batches(batch_number,product_id,products(name))",
+        )
+        .order("updated_at", { ascending: false });
+      databaseError(result.error);
+      const lots: InventoryLot[] = (result.data ?? []).map((l) => {
+        const batch = l.production_batches as unknown as {
+          batch_number: string;
+          product_id: string;
+          products: { name: string } | null;
+        } | null;
+        return {
+          id: l.id,
+          batch_id: l.batch_id,
+          batch_number: batch?.batch_number ?? "",
+          product_id: batch?.product_id ?? "",
+          product_name: batch?.products?.name ?? "",
+          warehouse_location: l.warehouse_location,
+          received_quantity: l.received_quantity,
+          available_quantity: l.available_quantity,
+          reserved_quantity: l.reserved_quantity,
+          updated_at: l.updated_at,
+        };
+      });
+      return respond({ lots });
     }
     if (path === "admin/batches" && method === "POST") {
       const input = createBatchSchema.parse(await body(request));
