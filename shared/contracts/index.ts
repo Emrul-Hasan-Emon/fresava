@@ -19,9 +19,7 @@ export type OrderStatus = (typeof statuses)[number] | "cancelled";
 export const statusLabel = (s: string) =>
   s.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 export const money = (paisa: number) =>
-  new Intl.NumberFormat("en-BD", { style: "currency", currency: "BDT" }).format(
-    paisa / 100,
-  );
+  `৳${(paisa / 100).toLocaleString("en-BD", { maximumFractionDigits: 2 })}`;
 export const extraCurrencies = [
   "USD",
   "GBP",

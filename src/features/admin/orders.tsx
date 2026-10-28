@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useResource } from "@/features/use-resource";
 import { api } from "@/lib/api/client";
 import { type Order, type OrderDetail, statuses, statusLabel, money } from "@shared/contracts";
-import { Card, Message, PageTitle, Pager, button, secondary } from "@/features/ui";
+import { Card, Message, PageTitle, Pager, SummaryCard, button, secondary } from "@/features/ui";
 import { Scanner } from "@/features/fulfillment/scanner";
 
 export function AdminOrders() {
@@ -29,12 +29,24 @@ export function AdminOrders() {
       setLookupError((e as Error).message);
     }
   }
+  const orders = data?.orders ?? [];
+  const pendingOrders = orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled").length;
+  const deliveredOrders = orders.filter((o) => o.status === "delivered").length;
+  const totalOrderValue = orders
+    .filter((o) => o.status !== "cancelled")
+    .reduce((sum, o) => sum + Number(o.total || 0), 0);
   return (
     <>
       <PageTitle title="Orders" eyebrow="Order control" sub="Search, filter, scan, and review every customer order from one responsive workspace.">
         <button className={secondary} onClick={reload}>Refresh</button>
         <button className={button} onClick={() => setScan(!scan)}>{scan ? "Hide scanner" : "Find barcode"}</button>
       </PageTitle>
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard label="Total Orders" value={String(orders.length)} />
+        <SummaryCard label="Pending" value={String(pendingOrders)} />
+        <SummaryCard label="Delivered" value={String(deliveredOrders)} />
+        <SummaryCard label="Order Value" value={money(totalOrderValue)} />
+      </div>
       {scan && (
         <Card className="mb-6">
           <div className="mb-5">
@@ -88,7 +100,7 @@ export function AdminOrders() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data?.orders.map((o) => (
+                  {orders.map((o) => (
                     <tr key={o.id} className="border-b border-ink/6 last:border-0 hover:bg-cream/50">
                       <td className="p-4">
                         <Link href={`/admin/orders/${o.id}`} className="font-semibold text-crimson underline underline-offset-4">{o.order_number}</Link>
@@ -107,7 +119,7 @@ export function AdminOrders() {
               </table>
             </div>
             <div className="grid gap-4 lg:hidden">
-              {data?.orders.map((o) => (
+              {orders.map((o) => (
                 <div key={o.id} className="rounded-3xl border border-ink/8 bg-white/58 p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -124,7 +136,7 @@ export function AdminOrders() {
                 </div>
               ))}
             </div>
-            {!data?.orders.length && <p className="py-12 text-center text-sm text-ink/55">No matching orders.</p>}
+            {!orders.length && <p className="py-12 text-center text-sm text-ink/55">No matching orders.</p>}
             <Pager page={page} more={page * 20 < (data?.total ?? 0)} onPage={setPage} />
           </>
         )}

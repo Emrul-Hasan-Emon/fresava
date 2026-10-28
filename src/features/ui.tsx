@@ -127,17 +127,24 @@ export function PageTitle({
   sub?: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/60 bg-white/58 p-6 shadow-[0_22px_70px_rgba(47,20,13,0.08)] backdrop-blur-xl sm:p-8">
-      <div className="flex flex-wrap items-end justify-between gap-5">
-        <div>
-          <p className="eyebrow text-crimson/70">{eyebrow ?? "Fresava"}</p>
-          <h1 className="headline mt-3 text-4xl text-ink sm:text-5xl lg:text-6xl">
-            {title}
-          </h1>
-          {sub && <div className="mt-4 max-w-2xl text-sm leading-6 text-ink/58">{sub}</div>}
-        </div>
-        {children && <div className="flex flex-wrap gap-3">{children}</div>}
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
+      <div>
+        <p className="eyebrow text-crimson/70">{eyebrow ?? "Fresava"}</p>
+        <h1 className="headline mt-3 text-4xl text-ink sm:text-5xl lg:text-6xl">
+          {title}
+        </h1>
+        {sub && <div className="mt-4 max-w-2xl text-sm leading-6 text-ink/58">{sub}</div>}
       </div>
+      {children && <div className="flex flex-wrap gap-3">{children}</div>}
+    </div>
+  );
+}
+
+export function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[1.25rem] border border-ink/8 bg-white/70 p-5 shadow-[0_8px_25px_rgba(83,47,37,0.035)]">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-ink/48">{label}</p>
+      <p className="mt-3 headline text-2xl text-ink">{value}</p>
     </div>
   );
 }
