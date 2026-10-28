@@ -1,10 +1,4 @@
-import { ComingSoon } from "@/features/admin/coming-soon";
+import { AdminQualityControl } from "@/features/admin/quality-control";
 export default function Page() {
-  return (
-    <ComingSoon
-      title="Quality Control"
-      eyebrow="Products"
-      sub="Review and sign off manufacturing batches before release."
-    />
-  );
+  return <AdminQualityControl />;
 }

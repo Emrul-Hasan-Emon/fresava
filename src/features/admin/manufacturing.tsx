@@ -49,8 +49,60 @@ export function AdminManufacturing() {
   const [lookupError, setLookupError] = useState("");
   const [lookupResult, setLookupResult] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmForm, setConfirmForm] = useState({
+    filled_quantity: "",
+    rejected_quantity: "0",
+    held_quantity: "0",
+    manufacturing_date: "",
+    expiry_date: "",
+    notes: "",
+  });
+  const [confirmError, setConfirmError] = useState("");
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const activeProducts = (productsData?.products ?? []).filter((p) => p.active);
+
+  function startConfirm(b: Batch) {
+    setConfirmingId(b.id);
+    setConfirmForm({
+      filled_quantity: String(b.planned_quantity),
+      rejected_quantity: "0",
+      held_quantity: "0",
+      manufacturing_date: "",
+      expiry_date: "",
+      notes: "",
+    });
+    setConfirmError("");
+  }
+
+  async function confirmManufacturing(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!confirmingId) return;
+    setConfirmBusy(true);
+    setConfirmError("");
+    try {
+      await api("admin/batches/confirm-manufacturing", {
+        method: "POST",
+        kind: "admin",
+        body: {
+          batch_id: confirmingId,
+          filled_quantity: Number(confirmForm.filled_quantity),
+          rejected_quantity: Number(confirmForm.rejected_quantity),
+          held_quantity: Number(confirmForm.held_quantity),
+          manufacturing_date: confirmForm.manufacturing_date,
+          expiry_date: confirmForm.expiry_date,
+          notes: confirmForm.notes || null,
+        },
+      });
+      setConfirmingId(null);
+      reload();
+    } catch (e) {
+      setConfirmError((e as Error).message);
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
 
   async function createBatch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -216,18 +268,27 @@ export function AdminManufacturing() {
                   </span>
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      b.status === "planned"
+                      ["planned", "in_production"].includes(b.status)
                         ? "bg-amber-50 text-amber-700"
-                        : b.status === "filled"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-ink/8 text-ink/55"
+                        : b.status === "awaiting_qc"
+                          ? "bg-blue-50 text-blue-700"
+                          : b.status === "qc_approved" || b.status === "completed"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : b.status === "qc_held" || b.status === "qc_rejected"
+                              ? "bg-red-50 text-red-700"
+                              : "bg-ink/8 text-ink/55"
                     }`}
                   >
-                    {b.status}
+                    {b.status.replaceAll("_", " ")}
                   </span>
                 </summary>
                 <div className="mt-4 flex flex-wrap items-center gap-6">
                   {b.barcode_value && <BatchBarcode value={b.barcode_value} />}
+                  {["planned", "in_production"].includes(b.status) && (
+                    <button className={button} onClick={() => startConfirm(b)}>
+                      Confirm manufacturing
+                    </button>
+                  )}
                   {b.status === "planned" &&
                     (deletingId === b.id ? (
                       <div className="flex items-center gap-3">
@@ -255,6 +316,90 @@ export function AdminManufacturing() {
                       </button>
                     ))}
                 </div>
+                {b.manufacturing_date && (
+                  <p className="mt-3 text-xs text-ink/55">
+                    Filled {b.filled_quantity} · Rejected {b.rejected_quantity} · Held{" "}
+                    {b.held_quantity} · Mfg {b.manufacturing_date} · Exp {b.expiry_date}
+                  </p>
+                )}
+                {confirmingId === b.id && (
+                  <form
+                    onSubmit={confirmManufacturing}
+                    className="mt-5 space-y-4 rounded-2xl border border-ink/8 bg-cream/40 p-4"
+                  >
+                    <Message error>{confirmError}</Message>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field
+                        label="Filled quantity"
+                        type="number"
+                        min="0"
+                        max={b.planned_quantity}
+                        required
+                        value={confirmForm.filled_quantity}
+                        onChange={(e) =>
+                          setConfirmForm((f) => ({ ...f, filled_quantity: e.target.value }))
+                        }
+                      />
+                      <Field
+                        label="Rejected quantity"
+                        type="number"
+                        min="0"
+                        required
+                        value={confirmForm.rejected_quantity}
+                        onChange={(e) =>
+                          setConfirmForm((f) => ({ ...f, rejected_quantity: e.target.value }))
+                        }
+                      />
+                      <Field
+                        label="Held quantity"
+                        type="number"
+                        min="0"
+                        required
+                        value={confirmForm.held_quantity}
+                        onChange={(e) =>
+                          setConfirmForm((f) => ({ ...f, held_quantity: e.target.value }))
+                        }
+                      />
+                      <Field
+                        label="Manufacturing date"
+                        type="date"
+                        required
+                        value={confirmForm.manufacturing_date}
+                        onChange={(e) =>
+                          setConfirmForm((f) => ({ ...f, manufacturing_date: e.target.value }))
+                        }
+                      />
+                      <Field
+                        label="Expiry date"
+                        type="date"
+                        required
+                        value={confirmForm.expiry_date}
+                        onChange={(e) =>
+                          setConfirmForm((f) => ({ ...f, expiry_date: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <Field
+                      label="Notes (optional)"
+                      value={confirmForm.notes}
+                      onChange={(e) =>
+                        setConfirmForm((f) => ({ ...f, notes: e.target.value }))
+                      }
+                    />
+                    <div className="flex flex-wrap gap-3">
+                      <button className={button} disabled={confirmBusy}>
+                        {confirmBusy ? "Saving…" : "Confirm manufacturing"}
+                      </button>
+                      <button
+                        type="button"
+                        className={secondary}
+                        onClick={() => setConfirmingId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
               </details>
             ))}
             {!data?.batches.length && (

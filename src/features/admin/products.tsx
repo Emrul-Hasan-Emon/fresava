@@ -35,6 +35,7 @@ type FormState = {
   description: string;
   ingredients: string;
   claims: string;
+  stock_quantity: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -52,6 +53,7 @@ const EMPTY_FORM: FormState = {
   description: "",
   ingredients: "",
   claims: "",
+  stock_quantity: "0",
 };
 
 function toForm(p: AdminProduct): FormState {
@@ -70,6 +72,7 @@ function toForm(p: AdminProduct): FormState {
     description: p.description ?? "",
     ingredients: (p.ingredients ?? []).join("\n"),
     claims: (p.claims ?? []).join("\n"),
+    stock_quantity: String(p.stock_quantity),
   };
 }
 
@@ -199,6 +202,7 @@ export function AdminProducts() {
       description: form.description || null,
       ingredients: toLines(form.ingredients),
       claims: toLines(form.claims),
+      stock_quantity: Number(form.stock_quantity),
     };
     try {
       if (editingId) {
@@ -281,6 +285,14 @@ export function AdminProducts() {
                 step="0.01"
                 value={form.compare_at}
                 onChange={(e) => setForm((f) => ({ ...f, compare_at: e.target.value }))}
+              />
+              <Field
+                label="Stock quantity"
+                type="number"
+                min="0"
+                value={form.stock_quantity}
+                required
+                onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))}
               />
               <Field
                 label="Jars"
@@ -450,7 +462,7 @@ export function AdminProducts() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-ink/8 text-xs uppercase tracking-[0.16em] text-ink/38">
-                  {["Product", "Price", "Status", ""].map((s) => (
+                  {["Product", "Price", "Stock", "Status", ""].map((s) => (
                     <th key={s} className="p-4">
                       {s}
                     </th>
@@ -477,6 +489,7 @@ export function AdminProducts() {
                         </small>
                       )}
                     </td>
+                    <td className="p-4 text-ink/70">{p.stock_quantity}</td>
                     <td className="p-4">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
