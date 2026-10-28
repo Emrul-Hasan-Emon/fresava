@@ -36,6 +36,9 @@ test(
         "202610310001_product_currency_prices.sql",
         "202611010001_customer_order_cancel.sql",
         "202611010002_customer_addresses.sql",
+        "202611020001_product_stock_quantity.sql",
+        "202611030001_rpc_reconciliation_live.sql",
+        "202611040001_rpc_reconciliation_qc_pipeline.sql",
       ])
         await pool.query(
           await readFile(
